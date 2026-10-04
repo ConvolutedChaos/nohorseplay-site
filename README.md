@@ -48,7 +48,7 @@ Web games and demos:
 
 ## E-Dog OS ([edogos/](edogos/))
 
-A web-based desktop operating system simulation. Older versions live in `misc/edogosv3/`.
+A web-based desktop operating system simulation. The older version lives in `misc/edogos-old/`.
 
 ## Misc ([misc/](misc/))
 
