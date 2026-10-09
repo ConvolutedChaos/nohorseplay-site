@@ -48,8 +48,8 @@
 		let canvas = document.querySelector("#unity-canvas");
 		let loadingBar = document.querySelector("#unity-loading-bar");
 		let progressBarFull = document.querySelector("#unity-progress-bar-full");
-		let warningBanner = document.querySelector("#unity-warning");
 		let loadingText = document.querySelector("#loading-text");
+		let warningBanner = document.querySelector("#unity-warning");
 
 		// Shows a temporary message banner/ribbon for a few seconds, or
 		// a permanent error message on top of the canvas if type=='error'.
@@ -118,8 +118,7 @@
 		script.src = loaderUrl;
 		script.onload = () => {
 			createUnityInstance(canvas, config, (progress) => {
-				progressBarFull.style.width = `${100 * progress}%`;
-				loadingText.innerText = `Loading ${Math.round(100 * progress)}%`;
+				progressBarFull.style.width = 100 * progress + "%";
 			}).then((unityInstance) => {
 				loadingBar.style.display = "none";
 			}).catch((message) => {
@@ -128,7 +127,6 @@
 		};
 		document.body.appendChild(script);
 	</script>
-	<script src="../cookie-clear.js"></script>
 </body>
 
 </html>
