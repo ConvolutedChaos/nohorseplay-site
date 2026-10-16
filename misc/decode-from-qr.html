@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Base64 Decoder</title>
+<style>
+  html, body {
+    height: 100%;
+    margin: 0;
+  }
+  body {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: system-ui, sans-serif;
+  }
+  h1 {
+    text-align: center;
+    margin: 0;
+    padding: 1rem;
+    word-break: break-word;
+  }
+</style>
+</head>
+<body>
+<h1 id="output"></h1>
+<script>
+  (function () {
+    var out = document.getElementById("output");
+    var raw = new URLSearchParams(window.location.search).get("text");
+
+    if (raw === null) {
+      out.textContent = "No ?text= parameter found";
+      return;
+    }
+
+    try {
+      // URLSearchParams turns "+" into a space; undo that, and support URL-safe base64
+      var b64 = raw.replace(/ /g, "+").replace(/-/g, "+").replace(/_/g, "/");
+      while (b64.length % 4) b64 += "=";
+
+      // atob gives a binary string; decode it as UTF-8 so emoji/accents work
+      var bin = atob(b64);
+      var bytes = Uint8Array.from(bin, function (c) { return c.charCodeAt(0); });
+      out.textContent = new TextDecoder("utf-8").decode(bytes);
+    } catch (e) {
+      out.textContent = "Invalid Base64 in ?text=";
+    }
+  })();
+</script>
+</body>
+</html>
