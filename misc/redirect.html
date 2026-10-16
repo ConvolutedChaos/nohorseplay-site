@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Redirecting...</title>
+</head>
+
+<body>
+  <h1 id="output">Redirecting...</h1>
+  <script>
+    (function () {
+      var out = document.getElementById("output");
+      var raw = new URLSearchParams(window.location.search).get("text");
+
+      if (raw === null) {
+        out.textContent = "No ?text= parameter found";
+        return;
+      }
+
+      var url;
+      try {
+        // URLSearchParams turns "+" into a space; undo that, and support URL-safe base64
+        var b64 = raw.replace(/ /g, "+").replace(/-/g, "+").replace(/_/g, "/");
+        while (b64.length % 4) b64 += "=";
+
+        // atob gives a binary string; decode it as UTF-8 so emoji/accents work
+        var bin = atob(b64);
+        var bytes = Uint8Array.from(bin, function (c) { return c.charCodeAt(0); });
+        url = new TextDecoder("utf-8").decode(bytes).trim();
+      } catch (e) {
+        out.textContent = "Invalid Base64 in ?text=";
+        return;
+      }
+
+      // Only follow http(s) links, so a decoded "javascript:" or "data:" can't run
+      var parsed;
+      try {
+        parsed = new URL(url);
+      } catch (e) {
+        out.textContent = "Decoded value is not a URL: " + url;
+        return;
+      }
+
+      if (parsed.protocol !== "http:" && parsed.protocol !== "https:") {
+        out.textContent = "Refusing to redirect to " + parsed.protocol + " URL";
+        return;
+      }
+
+      out.textContent = "Redirecting to " + parsed.href + "\u2026";
+      window.location.replace(parsed.href);
+    })();
+  </script>
+</body>
+
+</html>
