@@ -27,6 +27,14 @@ var BOOT_PROGRESS = [
     [3.9, 0.59], [4.7, 0.8], [5.3, 0.86], [6, 1]
 ];
 
+/* ?autoboot=true powers on by itself as the page loads; no click has
+   happened yet, so the chime is left out rather than fought with */
+function bootAutoRequested() {
+    try {
+        return /(^|[?&])autoboot=true($|&)/.test(location.search);
+    } catch (e) { return false; }
+}
+
 var loggedIn = false;
 var bootEl = null;
 var bootOnDesktop = null;
@@ -94,6 +102,7 @@ function bootInit(onDesktop) {
 
     if (note === "restart") setTimeout(bootPowerOn, 900);
     else if (note === "login") setTimeout(function () { bootShowLogin(); }, 400);
+    else if (bootAutoRequested()) setTimeout(function () { bootPowerOn(true); }, 300);
     else bootOff();
 }
 
@@ -112,7 +121,7 @@ function bootOff() {
 }
 
 /* ---------- boot screen ---------- */
-function bootPowerOn() {
+function bootPowerOn(silent) {
     bootStage("off").classList.remove("on");
     var chime = bootStage("chime");
     var apple = chime.querySelector(".b-apple");
@@ -122,7 +131,7 @@ function bootPowerOn() {
     bar.classList.remove("show");
     fill.style.width = "0";
     chime.classList.add("on");
-    bootChime();
+    if (!silent) bootChime();
 
     setTimeout(function () { apple.classList.add("show"); }, 1100);
     setTimeout(function () {
