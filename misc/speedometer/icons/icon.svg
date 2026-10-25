@@ -1,0 +1,37 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <defs>
+    <radialGradient id="bg" cx="50%" cy="45%" r="70%">
+      <stop offset="0" stop-color="#15303a"/><stop offset="1" stop-color="#0b1518"/>
+    </radialGradient>
+    <linearGradient id="drum" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#000" stop-opacity=".6"/><stop offset=".32" stop-color="#000" stop-opacity="0"/>
+      <stop offset=".68" stop-color="#000" stop-opacity="0"/><stop offset="1" stop-color="#000" stop-opacity=".6"/>
+    </linearGradient>
+    <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="7" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+  </defs>
+  <rect width="512" height="512" rx="112" fill="url(#bg)"/>
+  <g transform="translate(256 256) scale(1) translate(-256 -256)">
+    <path d="M144.28 373.72 A158 158 0 1 1 367.72 373.72" fill="none" stroke="#5ef2cf" stroke-opacity=".17" stroke-width="30" stroke-linecap="round"/>
+    <path d="M144.28 373.72 A158 158 0 1 1 374.52 157.51" fill="none" stroke="#5ef2cf" stroke-width="30" stroke-linecap="round" filter="url(#glow)"/>
+    <line x1="172.6" y1="345.4" x2="162.7" y2="355.3" stroke="#5ef2cf" stroke-opacity=".5" stroke-width="7" stroke-linecap="round"/>
+    <line x1="138.0" y1="262.0" x2="124.0" y2="262.0" stroke="#5ef2cf" stroke-opacity=".5" stroke-width="7" stroke-linecap="round"/>
+    <line x1="172.6" y1="178.6" x2="162.7" y2="168.7" stroke="#5ef2cf" stroke-opacity=".5" stroke-width="7" stroke-linecap="round"/>
+    <line x1="256.0" y1="144.0" x2="256.0" y2="130.0" stroke="#5ef2cf" stroke-opacity=".5" stroke-width="7" stroke-linecap="round"/>
+    <line x1="339.4" y1="178.6" x2="349.3" y2="168.7" stroke="#5ef2cf" stroke-opacity=".5" stroke-width="7" stroke-linecap="round"/>
+    <line x1="374.0" y1="262.0" x2="388.0" y2="262.0" stroke="#5ef2cf" stroke-opacity=".5" stroke-width="7" stroke-linecap="round"/>
+    <line x1="339.4" y1="345.4" x2="349.3" y2="355.3" stroke="#5ef2cf" stroke-opacity=".5" stroke-width="7" stroke-linecap="round"/>
+    <line x1="349.0" y1="180.0" x2="392.5" y2="141.6" stroke="#e9fffa" stroke-width="13" stroke-linecap="round"/>
+    <rect x="155.0" y="216.0" width="202" height="100" rx="16" fill="#1b3036"/>
+    <rect x="164.0" y="225.0" width="56" height="82" rx="6" fill="#142327"/>
+    <g transform="translate(170.5 237.0) scale(0.74) translate(9 .5) skewX(-6)" fill="#d5ebe5"><polygon points="6.3,5 10.8,0.5 35.2,0.5 39.7,5 35.2,9.5 10.8,9.5"/><polygon points="41,6.3 45.5,10.8 45.5,34.2 41,38.7 36.5,34.2 36.5,10.8"/><polygon points="41,41.3 45.5,45.8 45.5,69.2 41,73.7 36.5,69.2 36.5,45.8"/><polygon points="6.3,75 10.8,70.5 35.2,70.5 39.7,75 35.2,79.5 10.8,79.5"/><polygon points="5,41.3 9.5,45.8 9.5,69.2 5,73.7 0.5,69.2 0.5,45.8"/><polygon points="5,6.3 9.5,10.8 9.5,34.2 5,38.7 0.5,34.2 0.5,10.8"/></g>
+    <rect x="164.0" y="225.0" width="56" height="82" rx="6" fill="url(#drum)"/>
+    <rect x="228.0" y="225.0" width="56" height="82" rx="6" fill="#142327"/>
+    <g transform="translate(234.5 237.0) scale(0.74) translate(9 .5) skewX(-6)" fill="#d5ebe5"><polygon points="41,6.3 45.5,10.8 45.5,34.2 41,38.7 36.5,34.2 36.5,10.8"/><polygon points="41,41.3 45.5,45.8 45.5,69.2 41,73.7 36.5,69.2 36.5,45.8"/><polygon points="5,6.3 9.5,10.8 9.5,34.2 5,38.7 0.5,34.2 0.5,10.8"/><polygon points="6.3,40 10.8,35.5 35.2,35.5 39.7,40 35.2,44.5 10.8,44.5"/></g>
+    <rect x="228.0" y="225.0" width="56" height="82" rx="6" fill="url(#drum)"/>
+    <rect x="292.0" y="225.0" width="56" height="82" rx="6" fill="#5ef2cf"/>
+    <g transform="translate(298.5 237.0) scale(0.74) translate(9 .5) skewX(-6)" fill="#0b1518"><polygon points="6.3,5 10.8,0.5 35.2,0.5 39.7,5 35.2,9.5 10.8,9.5"/><polygon points="41,6.3 45.5,10.8 45.5,34.2 41,38.7 36.5,34.2 36.5,10.8"/><polygon points="6.3,75 10.8,70.5 35.2,70.5 39.7,75 35.2,79.5 10.8,79.5"/><polygon points="5,41.3 9.5,45.8 9.5,69.2 5,73.7 0.5,69.2 0.5,45.8"/><polygon points="6.3,40 10.8,35.5 35.2,35.5 39.7,40 35.2,44.5 10.8,44.5"/></g>
+    <rect x="292.0" y="225.0" width="56" height="82" rx="6" fill="url(#drum)"/>
+  </g>
+</svg>
