@@ -1,0 +1,1680 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#000000">
+  <meta name="description" content="A pixel-accurate Roku home screen simulator in HTML, CSS and JavaScript.">
+  <title>Roku Simulator</title>
+  <style>
+    /* The real Roku UI faces, supplied with the project */
+    @font-face { font-family: "RokuText"; src: url(fonts/RokuText-Regular.woff2) format("woff2"); font-weight: 400; font-style: normal; font-display: block; }
+    @font-face { font-family: "RokuText"; src: url(fonts/RokuText-Medium.woff2) format("woff2"); font-weight: 500; font-style: normal; font-display: block; }
+    @font-face { font-family: "RokuText"; src: url(fonts/RokuText-Bold.woff2) format("woff2"); font-weight: 700; font-style: normal; font-display: block; }
+    @font-face { font-family: "RokuText"; src: url(fonts/RokuText-BoldItalic.woff2) format("woff2"); font-weight: 700; font-style: italic; font-display: block; }
+    @font-face { font-family: "RokuDisplay"; src: url(fonts/RokuDisplay-Bold.woff2) format("woff2"); font-weight: 700; font-style: normal; font-display: block; }
+  </style>
+  <style>
+    /* ======================================================================
+       All geometry is measured from the captures in ref_pic/ at 1280x720.
+       Stage coordinates below are literal reference pixels.
+
+       Layout rules derived from the captures:
+         row label ink top = grid top - 30
+         next label ink top = previous grid bottom + 43
+         => next grid top    = previous grid bottom + 73
+         a focused tile with programme info inserts a 56px block after
+         its grid; the focused row always scrolls to y=160.
+       ====================================================================== */
+
+    :root {
+
+      /* nav glyphs keyed out of the reference screenshot (inlined so CSS
+         masking also works when the page is opened straight off disk) */
+      --ico-tray: url(data:image/png;base64,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);
+      --ico-plus: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAKwAAACMCAQAAABLlIplAAAWp0lEQVR4nO2d729UZ3bHPzMew4CHxCR21gTTOBvo4gS6JiFbqIjqdJ1VojrdRAKJqKmaSpHaP6Mv+rZSX7TSSlXVvkDqasNqqcK2tGEDUVLhNiywwdk4iluc4IITHJiNDQx47KnOOc9z753xeJix7x1DMt+RZ8bj8X2ee+55zq/nnHNTpTSwALSRZojX2QbcIksBQQ8n+BH/zYJ+pxpSQInGkAE6GOTP2ArMcpUR3uRXZcdp5Jgyhyja3Dkt8CQHeYEcBeZ1zGnm6OQn/BVFEkXGTUxOo4vXlKxRnOckp5ck6nKRAnbwIjuAAhkepZsrfKgnL4hnPGGZc3SxlZ0UaSdDkSwdZNjLIMdjGaPm4J47XqebWeXUrP6UmOEQR5Rblz7VUoP8mnL89W36aaedFOtI8zjfdnOpNVatOUQfRYos6M8Cx/k73qWPNuaYo005dTtDdJIo0gFZvsd2suSUqB4TjPBVQuNuZStF5VfhJOhetKDjwQInmGBMV6esz4yO+TRDCY0XIaxwyCaeZ6cTDB55jjGpVz9+ZCkxF+H2STpVMi5vFdTGAm9xhpvKyTZ2gV5e4bskiLQuwBR72EMmwq0zXOM4R7id4NhFvZB2srNlhI0bZzjJtBtJ1oeIux0MJ8mzaeXXPp5nCzldLHKyM8AIRyk6uZcUSsqZGUrcrFgt8eI2Jzmha09GyepzgV3sTW5II9xutQbMwBLIwOOMseA4OmlkdERvEySBLzjNWXfxiu6nK0k5K2S7nyG2K2H9YhEz69+dJZgE5lWye26dcws0SczzNiOOW00UyJi/yyNJEnYn/WT1xETKZpjlGsf4dNnGz3K4NXncYkRVsRd3MnIXe7gvmeHSpPhjMkw5U10I28k7vEOSWOC6ylc5wRJtlFirOjteayCELPgMv+JvmWCeFO36LI8DbE5kRNI8yR5yzOr1y6pdMM0IV2keik3gWVPS4yoOBMK1cq7b2JOMNZLmJV38XeQoMssscILxyN/jRmkRV2bUIxKrVgRPUlwrGGNE5WsozzMMcp+u25iRZo9yq5giBX03y1Eu0ixkAttZ1FjyGOV8marsoZ/tAfvEyEZpekGjP0JY8UnOMxo5xaRUV0kl3G3l0dvOv0/OGVkIHp9zzDm2hjxZhlkf/+pMa8RHzBB5FQKfVPfg64rrHOdiQFbRKTl20+tYKUY2SgdBEIlrFbnI6SrCPH43IcVq4TMmWEe7qkxhpwz99Ln5xCoKhKwZ8hTJAaeZSNxyXV2sYSTiCE2pXtnKhriHEVEQqpAC4+SrKBGRgenIY+Uo6cPHZs2mTDWFo0v8nA+5RYp55lir9sgTrI17mLSaH3l1DuQ1qri+nihxidNqVgosvraTLmfpxiYQRBQIchrb+oSpCs5JFqUI10aRqvg8vpVio35AWgWfxZoL9LCDdcSKdCAIRJCf4xLfBIwxqerao8iAEjpWq8CilELcacYSDd2VY8H5695rb9P9Ly9rU2VyPW7OnWA0EiSdpchWuogVaXflxKK7wCSpJkVgVxczGufq1P0vsxA2xW0XCBnX6LtZxnWBzK+SuZVyF7QtYkeHHlP5nCovfuPMMMUVMm59rKNIT/wcaxJWHNppbqya6T7b5PGmmVZuNTNTRGGPXpzY1mt4mCJTGtmvFl2Sz5binuWhFLzzYec5d1yR+X4OUds5Oq7Fcu0hPNdIRMyO/ymfBRK9XT/tp4M2Z4/E5tLKqU0zwTcHefU1BfZcoDOIs8UiCi1gKDbcZZWwzUVRRY9xaDWuq3WKxRXkjkkwRggbSvMMOXqYjk9xC8ea4ZHnNw3+Z3wubjFyzOXAL+pGFrHECMJdW+jUpKPYFLccWkzjbISs4fRSdebSRMlRjTQLFa9y5C/5lN+iqBwrkWCZgyjPNseBtUgcnZc/ZqMWuHGsBPZtI7WdXHDcUjwOgly75etl28ZuFCWyPBgEgES+TXGLZmKavONYW7HZeJ1aO7TIt/9r2BE2lCpe7aqXlvw/wTwbSPGF7l7Mqc8nexeP8Yn7zlIcG12omSqcWqp7MaeYVFbypJWL20OMsJQbOfB0MGQ9EPPnEU0bluWbXUTYWshwjT4G6HH7s7ZWcuzQ46UcB92JsOXiwOzSfAMyMq9CwJJWzXiL1UUQO/C2EsY7d6WIpvXEyuiE7VSFFCle4ym26nRkUvKfCxUnnI58Ft3eruRlyYNZy016+Qv9XlsVbpyvOPac+54n/hwZzjHOES6XcXAtmSmXM3QRYt+E9zmjQpowIlmJhciznMwP+T59Loluzk2qFmGjkJMsKHeIADApazxv+rmeXX5/Afzxi3QxyCCd/I3O584Qh8fGlrnPxZ/bYCdlmrkc1Za0JMkJf32fHS61rKgcIpOMckU6+H7l6dhxfQTL+z3C9ZYDmNH/9eaX/a3yf8Njz7vf5X2K7XzJPzDrEv/rEQrlGWMxc6xMTEJ38uNRKd+8myefS3hvo1tCBXLcZlbDGNWQcgS5VUGcnH4iWtjcSZNxgtqJoyaGDHIxjTAZN4c8WxlghlvKtT74uBRSVUgqx4u6tHfWF6Xae14+ll6vwW2nVFAZJT7L4uFKZQ+LMKxx1qpdkmjSaEhWe9/mHpaTGMYFiu5xS4ln2YqW+dXGDa6qQp11EY9GEMakY4PJmErCViJ6DYVTpvmStY68xmFRQVIqUxrhKRb080JEsobw49vxohZGyS35kuNv+5bBq1PR6LLBMsroiv3AmIIwonTsUc/VSjkS/IIsz7jP0mSZqeDaVOS9V2JhPZlkWFebiZFrwclZIgT2c7PlLR6TXRovWm6SYw2X+FfOlI1ZC5blKA+xKarPfQUIpUst89jshbB06SgF2tXcKrBGT7BYk7BpdwEWKOhGs9i+ltYT9db9MfKLCOtn6ZWXaf6QsPPkeZ9R3lPZ3VGHF5lmfZAl68eYXKTAV4AMa/T6p8jqDnsqWHrlZk8YD7XPj3OC79KpQsEv+fC6pxxJlrr6HXTyp/w+s8qfJt8KvBLwfaXfHx6nXHb6EYvkuaHP8g05arVvRyGyu8BNt1JkvUr0IrRWVoyQGI2mqs+7ZSfTj8pFQaritfIU59jAD8k6zhIPSJ4ng6yxejNW05HL2CgxRFVJrY6X937/K0ZRMN8QWeWb5TWv1fICDNUmaSabZOP6McVOkCiT6fl6Yq2VdnLjqRZiP29wRmYitUF2rURmbW7qbtdsxJLwcrZ+P7+SkJ7DSw2lr4Z7BjIHK3aNDaaLRar0qcfeKKIGVapuopTKclRD1VXJoUsRarEDE6K+HYUF+uhSJeohYZwY4acoZr4v221kYYSuaSP8XqoQPiYWkk2Tr5xBX0W9TuyENfcg63bWm3NiJW5HcmBSieSD1T5yJ93O9hClJfbQbLyEDZdjB5s5HUyt3MC25esnXkn+5e0glNy4Ieon8Movf4eLvsr5S0aMpHDciHOckLBdbHYuatsiO7JygEo5VoskqaoTFK2c0k4e82rUl+cNVDvGneZTP+TbW+h19vO8xhuKnHWbTBYpWzG8PJVBttNBs1AIGk6EDmsz0eciFgKLeUjeWowIHbosj3EfC+q3NLoJvNSSKdXMNQzXhYmXWl08ljd+NcjayDDABhcotRV1mWuRbdFYdml9NXSBbhcvaFZSXJHVwv30BonHVuE2UbVEYAWQeKxV74tlMNi05LRspFQ4wzp9bk76qCSFyLZSFAUukI+39FNiTn6TRSr4ZcDm5ccW4vV26oBl7gzQG1xaO/sxbsZfQGcNb4SLhLAi6+6U6hPaidUFfmoV67hqw8KfT/Cg/mZZ4xLMHKNY5zZknUhrqM3r5W3sDqL0SSMTbNM0U94KGXvoizjSorbHtaglZo69xozWO4kntIkf0En7HV3L6H7WUn9fCotrAMvD3MnB7+fuoSfgTksJPEWBku6VxQYpyzFbwKKR29kdfzFZFfj0kChBk7ZGLMD5ELuDKKxway/TQd1XKolaWpG1eToZ0h2p5GIGJX2OBuzKtyKThEjUJ3jMKWvZXvqcdUwy7mzqGINAaS7qvqk0LBHk2MXD7m/JKKBU8C7k1eb5XlkG2BUwkkjYcd7javyMlGaioudEjv1NMrgyFa/NQD8DQd2wnPVWPuJwEuszzWkuBp2oJLIv9fvGs6WvoR27m6c1PGjjWt272EWJEHbSbUz4sEQ/uxO3Qxf0Wcwt6SjULDysjTE9WSWpb5LjyXibaS4xpjlYYXm9ZKom2QQ0tUqxghQvMqTvzH6Ws3036GsUM6SC4JeMueioj5Lu0RTgZFBSs0equqSqyjpiybjJNzb7HvvcWHKWWfJMcdoFXxLoYrTAFKNaWRpq50d5lSfuYsd0OVjPPu046tvvCb9e4D1N+0wARtgRbQglieMWlujhWfYF3S+SQqaJqivFXgacY2LOtKT2jfC/VdJNYmzMO8o5rSHxlaVTZBli1x0ShVaCrD6bLWmnm6zE3cg+9mlnsRnXCqvAWU6qaxvTZkw5zGKd4mhgdBRdgdJ2hpNqqIg1sPYp8p60yeEBntNGg6GwE9JKY6HEzEpLeJxnlLPO7BDpI1V6GXZwQEmQjDDIBM6sT+BcnMAcF3bxPL2uenad+plZLjK6jASVBjlWWu68yRnNGDVOkkyqzfwBTwVd3e4Ug20EC7oUvf1oobtkzC+Z6wPsoUv7NsqoN7lJB5c5GuknkkCiiLRLtJaJZzjKNf3MAhRC4J3sp7uipDMeFJnkoloi4vlIL/vxmA11zwDreY5hl0UgfeFkrAKnVL4m3KPb7hhQ5D3tVSl7X7KDKp0n2vkjDvAQbayhPagM8Pbn8pByaZdjjPEtzYmROaznrRjDhjKG7ILILtZT/DnfoU27EUitgrDNWf6Zy67PQUJGpTfKZTvmKsfoYpdzb03yXeNVCrzBbOw7C+P8mBxPq+z7gDHOxXp0WWOy0LfwPH3ufEzoSK/ctzgXXOCEYIT13bh/yeP08agr37Uyt26G+YT/qllgt5zTvsoof8mQlmVc5ljsrSplrls4yMCiGrb3+YW+GllLSRLWk+waJ3hA66Ct1L3IFi7QzzATTAY8m44lbDKvK+MwMxqGiTcQYzphE69xwBUx+a32HBP8mAuRmrPEOdZe5Q5F29mlfVVFyBeUyM8wyyEu6fcysfFuiXmuu1KNuJflPBt5iRfpVGfHxIAkxo/zZiTskrAoKCfSKEfoYos6DMJNtv/+HFkO82FQMhTnlFKxn+AC3eznFXpdiwnj2C7y/IzDVbIKE0C1iNJJujjIJma1tNPKzrPs1SX1keYjrpQQ6Uhq6PJ6utRGjmEO0OdcAuPX66zjQ/6DyzQF1SzUKQ5p+NcHvu25i2cZovse6COXYpD9bNUYc7hTkGWEw3zcrElUj4Fe5Z/I8XJQdiExTOl19BztHOOjFS3fUqSE07g1HhXis3o3cJA/USEg5JSNbtt4muYop2rMOzqLGFbQUsHlzzjsJKu4nib+s+zUSoVjnIo3HWfF8BXsaR5mPy9qSxQrALBXIfIRfpJY3KNuwsqnoxwipxWzfttGhMQmniNHByPO/V0ZSsQHqQrezEu8rNoho8ahlIKuJcuXnOSNKkn+CWLp7ZACH3CUDLtcJMqk1RU2McCDdPJzvTddot5LA5B4xu8xzG6yXHOWgNni92tQ9Dhf0FRUJ6yFfuf5F91TkASHa2zQZv4b1FboYQsPcYRP7xqydvMsr9Ov2TwCufmkIE8Hb/H3zb8FwZ028EZUvvazMYjW+ubLw+Q4zvsaQGmKZVgDz7CfXWwiz01SdHJF42ZiCeT4Rw4ldN/HmkgtYrlof2Hh3U4GGWavlvT6RF2pnO7UBkv/xmEu1FQJpWqjln3emDjx1b/tzrHZSB+v8iydqqJka7BThYGEzSd5l7+u84ZEMVsFtQgrZL2PG6QZ5FX2Bslz0jdF0ueMzGfV6m0uYUsaFJSWJb0ManaL3d/JRIA1/skywZv8qG77JXHCVu4tWOeix3mVA7qhYd07LaxoiQ8fcZxR3nZ2pHy/FDlOGKVvDNUcETmGxFjXq2D6FsMMqnKVULnA7sVhbuw4h/lpg40wY8SdCGuQL/VzkEG63baNqAZrnSOQRv+nOcmoNryZL9tziJuwhm7+kOfJsM3xqt3FQdwB0xqn+CknV0O23pmwi/EdXmCIRzSHxJo7+cQHiSFNM8V5RhhhpiyssxRhy0XOYlRvwZdiLffRy0FeDsTSrDbzmyNPl66jPGc4xH+yqqiXsBYofJBn+QF9bCKnxrfcn8YXyAvvTjHOKc7xa76MNIhcuplDuqIHXZTAlkZRrhalemCIPjrZpj7hDBu0m5IoVgkUyUU+xwne4oPVNgTrJ6w//cc5yD620c5E0N/N5weYUV7kY70V+yTXdTdtsXLyDXjKOTVs8We1LUZWb5tk6WM/vTyqi1+0vhl+0gNW+FTa6Mm9cn7Gsaa3Ul+RKPD8tIat7GOQ3wn6tJmcnVbutTDjV+S5wqT2wZpguqpmrmynF+VYz82i+2VXtZcBdmu1RNaFMk0IidKym6+KiTWmuYPj8ZbHN0PG2olnWM9tnmSYfWx0ethnBEjacopZdRhE3hWY5CMmOKvdWvORELm/M70/cljT4ovcZIuoSC+7tbGeteMRYkroXbhUbFafmy08LAlDx7XLdrxh+CZwbNiYTDbA5cY3+xig3yUIFZxOlq2cryLbd6Lq7ifviDulz78J4qQ33BElAdm4X+41ul3lqLyThg05vYG1v1HvLXJqcskdnXyG5BtM8h6/dhGue4ywZf/lDKr72c8QW3Sn1epjJciYU4XlGzNLHzb57i3l6zwzmpMiqWmWr2UNJX1gsktlqE979o1Iq3VREg6XBtQXGeMI55dsRRXf3nITCBvKwXXsoI899Cs5RGmIqb5OGztG+7xKsNwaP4o7bLUHZnPKBYj2CDc7Q+BluKXpmbKSV7FO8qTIc40RjjFWpqwWK8p7jLBCsvUaNeqmV4WC3JjdeO0Wc9znCGNa2+IL5hVlWRvwoVkS1vrUFrs839I7FoX9MaV3ol20AvPkSDPN/3Ca04ytphOQDGGt9lRIa7cR6VWZu5stdOrtG3wrGyGiYMb1AreehEZsHzGzZRxqe99izfNum9rMkhUg6U953uE0Z5i6W4m6EhkbTeQJW+Dl1BR7QetxRaZKJo3wnpWMCMlkKVsDNYFXcdEOcRa98rttwuU5tjCpl0XSLc5ynre5VNbRs57um/cUYb0EE46VtqHyvp0H2cUOfpsuegLPLMyDjTZM92qpsvWeNOER+HL/dm1tflOt1I+192e6zDZeJTmaJGHLT8t4sU1tBqmpMrNJDCdRUSYGfLJPdGu9nLCmzq4or87yFbNMcIJ3lcMt9bKD627M0KuLOex3NxC2krwl9ZekUF2KfnrppYtebZjWG5B2Q6SPfCVhJacrr0GdMfJ8zpRGBcRs806E/1lqTvcsYWseUZ+rL849dGoARxo2iiLy8AGbPGN8onbulHaE9Z2NopP0Lf0r87+/0YRNq+Vrfbp9+Mb/j7+vliATIaqgRdhYkF6Wjg97aN0VHNvMkvZ6cddp+OXg7k9xu0fRIuzXShSkKn6/C2Ri3Ghx7D1jbrWgaHFsQmgRNiG0CJsQWoRNCC3CJoQWYRNCi7AJoUXYhNAibEJoETYhtAibEFqETQgtwiaEFmETQouwCaFF2ITQImxCaBE2IbQImxBahE0ILcImhOr3fftaJPmsLlocmxBaeQUJocWxJIP/B87tySztbayiAAAAAElFTkSuQmCC);
+      --ico-find: url(data:image/png;base64,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);
+      --ic-home: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAB4AAAAcCAQAAADc8cciAAADEElEQVR4nJ2Uz0tUURTHP/e9N2/evByHdPqhtFCKEMo2EVFBVlQQSC2MpNoE4SLqLyho07J9i6A2GVFQbWoT7aS0hS1MwYhCUzRIG3XGGefXO3HvvHHUlKh7efe9e979nnPuOed7lPD/w9rwj/pXsLUKqsJ1Y/3yp0Uhgo0it6xQH5K/gS2C8CtBC3vZhfCJfuYoUv4T7KzZFczb5wRn6SCOxVfe8ZhhA1ar7a8Gl8ya5AjX2MErxmhgH13EeUwfpbWurwTbocNdXCHgPq8Yp579XOA0ikWGWAKi5NcDl7Fo4hiX8HjCc6YpMUsfKTIcJ8FD3lCqQde67XKaHhI84CnTRuKRY4hfwHl8cvSvCp0gtugVaZUb8lb6pEeazN4RxBUkJsgh6ZVxeSId4Vk9I7XPJrkuozIiV6V5WeaYqd8xOSh35Yv0yhmpF8QTnWSxxRZXtkunvJWMvAihWpqQrWZWvTgswzIjr+Wk8UdJeOcGLnKZVlJMMIWLzQ720U5AkQUGGTD3XMDF5xBZsrzXaXNMjJc4Rx2DtJsi0U87N6kjTQzhHRlGieBTYIEB2rjMAAGWY2p3jkfYxDnMlrBMO0nyks9EaaGbBe6wyAQ5crzEI23K2HZC3jyjgVPkDRkcdnKAD9xjBoc2ummmTIxGHCYY4aspFihqsBAjTQSHNGlTaXMkyPPNKPrOHFECypSJM0PAfJU+lsmJtpclQyPNWiOzlEhSb+ppDIWDT5mAHzQTw8dCYek7V0cBIU8WiBCjSI6MaQebUQQsUUaIGiMVgkjVsh6KKL4hRwkLmwAXhYdLwdTzJnRwtYoKgXTyV9BikQCPCNFQu1agc+oQwyNFztw1XqvtGljh49LOLYokqDPZ91gy3uzmNj/ZzDbSOOtR0iPLJHtowcYmzzg+KRTbmKKDVgoUSPKaaaTaFGs9zKOFNiwTVyFgkn4cSiQ4SgTPxLzEFB+ZNyEM712drlghCSs7/agKBQwta1MZGUqqvbmiq9K5K2sZO4y8tqRlOtorOpkSLVzb2Cvp0OB1Gm7N0G+Au2jzTv2A/AAAAABJRU5ErkJggg==);
+      --ic-inputs: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAB4AAAAcCAQAAADc8cciAAADFElEQVR4nH2VS0tUYRjHf+cyM85NJrOp0IKgkKiFLYKIkHZGENIii2jXuqCv0DZoEdQHEIOWtlGwNiFBUCqtwrCSikERSWccxzNzLvE87zlzkegddN4zz+3/3P7HisAmonOs9nekv3fLUF35C7HlwekRGmVbROpAXJm7OWEsswnBVXUxELXkO+xxFeKoga9PWUL9QGhFBmYKl0YXSPEfHoDtAEFXUliRRD/NHU7hEJECWgQxOHFsgFsaa4dFPvCdPRx8bIFtM8IkZ6nTwsXHjZ0E+PqLcRTh43GZq7xkVsuGi6V+S/zmMQ2K1LBpkgUaWFoTOQERDkVGGcPmPVWJbYQ1PIZ5wxrpdmF6myQh0jS4CFzhAc9oEUpUKJNiPa6sZCe3NP2k222SzgbYLPKWPNfJiUMx3mcX8PAUXlqrGlHmAuW4eeYTqQsPlyPYNAgFtsUq0/yhri0zmeYY4SF1nrBs2qKmlv7PkCUvdq62YIXnZGloxoLFo8o6VcbY5QXL5HQGUN0GQdzMjClYyC+OcVygaHTJdJN5znGNHUI+xyNjYVPAZ5stQlrSRcl0mAnOUyBFgEVAjhZ5shS4i8OjeOogoIHDAEV2zGzDILe5FxctT1ObIubStjxH44UINHeZDJeMVEGuMM4kLabZUGFTI/QxyC2GWGKunS+kdDG2tLg6ihY1hthnlm84uHikCClxnwGWmOIdji6Eo3mLVEJaRGYIpHaH2df5FSWfLKPcBF7xmkp7u8HHj3O2JLJsa4kUX6ipSkv9+2RYYIlZnXWziIHmfAibCptyT1rlMaBFSBSbLPAJjz0sRZPMeoZczDWRDIlcNnRqzN0UJqKmRRFXhi5kstIUKFKhYsZJDELK2PyMoXWIyGAwjCXrYnGCCW6wwhTromNg16lS4qnukkBOjDpcZkD3cZI8M8wYFpVW+azxgzOM63wZg27GTDYatvnIHPNxeoFwGOS5RL92POm9MZcdStwIg+6yytd2ANcQoN8FMnkF9JJ9wqkJc6uuod4OSBElPK5vhX+e+K1yUNx5NqT03/MXARMhi/w84xkAAAAASUVORK5CYII=);
+      --ic-sports: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAB4AAAAcCAQAAADc8cciAAADkklEQVR4nKXV229UVRQG8N9Mpx2GoXW49RKcSBFa5BbwARURbQzRBEUExTQRTIwmGhOefPFJExL/BFBjNCQSYkIIoiKQEClIUi9RE2gFFLAplgKlFnqb6XRmzDkztRQf3Q/nss/+9lrft9f6TqTojhEp34v/mZk6G4wIUf9jxKa8RRREFMVlxSXUW6LRAtWmIaNXuzaDxqaCI6IKCuW3LJZo9ai0pCC/4EtBzuMa7A3BxUlwUaHMKabGYi9YrtG4My44r48wj2Ve0qrNQInzZNpR+fAe94rt0vp8rd0VV/XKKspJWmqxFRY5ezfnABo3z6s2qHfAcRf1uawy/FJUYcSwKx5QU841Mql2wHquF71phk/tdtRKO6QtUh1SiirKyhkuZzglclHKG1rlfWK/i2Zqssk6vT50COPh6qiqUMIy01LUKqzRKuEj+6QkQ3ZJC2T8Ga4I5ExJSbhexoR7Bdcx822Vtstuld43KGmhNk163BARk1Mlp1bM0NS0x1RqsdavDuuRlvOEmw75zHpdesOoETkxw87puptzvQ0qfO4Hs6SkZcw2xy861YpKiJlu0Dlvq3H5bvB8a/Q6YqFnjGuwT955UaO61HjSPPfrc9ZpVf/WYRkct1SDY7ptslW1Cu2OiajAY1pslDDqHn8744DT+kIBy+c8R5OcTrf96CcJtLhhVNZq73rLIjEH7Tdso502l9uzWIrcoFnGb2FLDOhwMmyNnCbbPOQ7GU1O+MNR222x2ReuBRKWwIFEiXBiwHEnnVJQJWulp132gYWWS+pxS9qDmm2y17BoLPSKCrXyMhhyArfCLeuslvSV85bpd13a69apl7TNYSMB57y8hKicm2HPDrqNSkw324jv3et5/QY85TUZu4xbKqZgfKJIAvlzIbioylhYyQPyqrxspmofS3nODXsMixiUC/QuqR0zIuY+08RUKoYlMVdRt7i1Buy0R4NVOpyy2pAOo8ExliJfckGNba76y6ikGnUavOdn3Zbo9K0xg/pVW6XFLQdkFcQmwF+a59lyweRlzdKtVrvD0rYYst9VnVqk1Tnim5BWIVI24zqPaNZohpiMIT1hiv2a7bBepX45dVKyLnlHW8kSJ8CBvrPDbi2EXjHimri421ZY62HL1Rl1wUFtfpcv9XcJHMgWkRcNd5ww4Yryc6VGNVIKBnSFB1pynjsiT2wy6d+lX02woEI+tI2S2Zc8vsg/CCM5/41DHIMAAAAASUVORK5CYII=);
+      --ic-livetv: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAB4AAAAcCAQAAADc8cciAAADLklEQVR4nI2USWgUURCGv96mZzJmouI2IuIOLogRxbiLB4MLgsF48+TJmwcVBPEiCHpVyMHlqif1IoKoeBEJ0VzMweC+EBKMW0YzmZnuflL1esYJ5GA1NK/7Vb2q/6+/nmNIzaGxVPOI05VLwpTmTv0biNM9CZ1HXlfuZP9/H/W8jj4FVtECtJDlADfYrx4efrrvTJ3ZB3Ls4BSbdHWYE+wkp8HRZGh+mq2e3cHFJ0eRI/iMspxjLOc2T4FMyoOnoJx6sLxrBBQJiPH4yigv2UwPLkvp4yY15gEhZX4CiT3GMRAAEWvppIMF+JQpEFKgjYiIkD8Ma20uFd7xhIe80uyRBEtByzhDBz4xIRUqBEqN1CNAJJflPUvCfc7yTfzExSij++jjFs9JcAkY1yJtp30SAgwVCqyjm93s5Q5VPExgMmaNeWC+mSMmZwITGgzGMVkTGkfXvskY32CyBjPTnDRD5rGZLz6u8raUdjK8ULKqOGSYRkQFjxXKR1WhRfj85jUh7bQBgd9oUqgkCDZBXVOBbGE1X4hIyABVDZevvO43JNhsER4BIes4SoFxXM2dNLQuHk3BYn80vzyxcjqXg3TyqSGiKFW8jfHknw2Wc3IqP3ET3HM4ThfTSdiW4m6Wpmur8BWpR0LY2I6ZRRcHmQGcJqSf87xVNqo6GhIsSRLJbPTHbyKlRWwJG8kzRsJicgzwNqXSWmIR49bZdpnA1cGQwwa5Sg9FLhLwiLtMqI+Dk5Im1RqSenBCQVm13yX6FUjIXS4zpBVJ5pgw9VeAFoFVbznlVVwj8ixihNu8aYysB1qDaDxpnmeZrDAlTDTmMZtRLtGrgqhpoDXLkh4oihEhVggpMtToe8QYHxhWicrQyoEotTI4ZfVzhSTDe57hs0GFGaibwwiD/FKcsWrbYzp5FrKVMR5o05Qwh89cZz2HKDFAiaRJDvUGyd2Ro5VddPORK/wQ5HIZyEQXuMAeQkq45NLRt6E2PKPdLdFKiXucsxTaYLnyZrCdQ6zUsbdKlqqson0CZQF6ucZQei159hoSk4unhVYVQp3ROrs2u7ToO2XidM//F/y/ZllX+wvz2yHNfDW9PwAAAABJRU5ErkJggg==);
+      --ic-foryou: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAB4AAAAcCAQAAADc8cciAAADN0lEQVR4nG3VTWicVRQG4Ge+zE+mcWis1Wh/aEMWaaCBbmz9K5qFIogKggsXRSruXKgrNy7ElWs3FZeCuHInUitVKNEmIXQTrILYQhuradM0Q5xM5iffJ/fOTJpMegeGuffcc8573/OeM7nMA1Yi7duHlfbb8w/yVTTsUWWpTE7VipqmovbOoLudCwaNeduLRmK2xIJLvvaXkiw6b+HK7YDdOR71mefclWrJSw046JxPui7hCb38Wf8nyaaypex8djobzfZlB7KJ7J1sJTufyUpde9K7m+/LGr5rht0wo6Wi4ZZ1Mw7EJ6ZaCho94B0ed3KZV7SopawpVVJz0x40bfYXpZ+uigm31boBA7KK1L/GFRXQij7Rrwc7cdxeRXllz6q4HW0NNam6NQe962fUpW64vt256JgPTMbdusS0eWxIFaTuuei4V50yrKHkR5+qhoR5icSYM14x56o79lg07x9DxiyrRpjTWiYV5I2a9IJrvlIPmQOAxzyt7pw5ibyqsrrTPjRv1py6tiv+0Nb0uCnvec23aiFzW8mwwzILVuOuFekqGzfuKd+bMathFSXXHcUxA/ff3IjCa2lvsdkp3D4VR+w3K5GLdxsqHor3CxrhxZux/OFXCFZSiiXJtMO7tKJAU0WNGDDwH0JvBti0o3GvcjTWu6WrSayYdsFVmwbieTtKpWlQKQTowF7xu5NORbr+s+me1JKLLvvFosSAihFNiZJxbQsRRSGXddh+y5tuuBmru2zeb1aNu2s5UjfkhGcUtDzhqMQXLqhLQksGmR/2hpcMRVgP432Xla0TVf28jyWxITas+MmXHYH25HnLN36IHbPflLPG/GojWtoOOYnP/akaEwXpxnp0nHOoWotds2ivMwYj882IpOSQRd9Zi5w0d3dVqqGuFbV9Xb7bPwFy4Hw9NkkSQyWKPa/7gsgZkGjFxlszEtGEN6cqHokCKnVvbo3B7QMwCCXTtOaOI173t4K2PU44ZC62ZtIVyNbU6K0wZDuTYt2sJ320NZaKrrmiGOfKjtUrVY+2IMKyYS+bsD9aBt1yyayl3X8GO0dvLubfvoK5dxKsnZMHOm8Pc//a7nDd9T/pSj9oGhFNDgAAAABJRU5ErkJggg==);
+      --ic-store: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAB4AAAAcCAQAAADc8cciAAADDUlEQVR4nJXUy29VVRQG8N89994+Kam0FZUmisFgDdXqhAEDTRg0MY4kjhw6Y+TQ+D84cM7YSAwjBxgghgHGhIBGRAgmikLRaqqFPnJt7zlnm73PuY8aHbhO7rnJ2evb61vfejSC/7CmIB5WDtnQSej9D3/839ZKt2ZyNOo7x+14yQnP6LjtC6t2jduWKTWGYzdCBQ7KdE2pLfea05bsaGv51Mdu2qyph2FwjEwpS3fG45YjTjvpisvmvOgNM963qZW8Yojh7NOThSwIzSBMhbfDSrgUjgdhOrwerobVcLL2kfyy0KienmCloFlTfwrn3cC2m67Z51CfbJkSbFS5V7SrbGPubUx5ZEvbhK5N9xTJeZ+tWrJKtD44ZtzwqlMOu+GQhh1vOWXdWUw4YdFRd3zm0nDePcHajnnPgtyqzVS6MYt+1DCua8uEBcftT+DoP1TnUteoRdd9qGlZZt5HVmz42bItHWdc8a5XHLQ+iFwJ1jZu3qTrLrpryYxl4867ataCOUtuueBLE54fxK3ApdyUY0o/pYvmrDtoV6H0mCflSaLcmtLL/c6uWzM+c2Z0PJT51TnfO2s9FeeWT3ztYgqyjVkH9vZ2ZU9o25Dr+sBzHniErl+c8blvUVgz4tDwfLXqHFpmjVrDhuCruraZwop7iWrHjjGHUyf8Q7ADZhQ6xvo9xKQiRez1YEfw+HBrV+BYqEm5v3T7ayDTMbJH1i075tP50Of4i+AfbCm06lhBYbc/O9E2rCvMpipEfqESrG3arrvJuVfF4eGrwLl1mckUOyUWu6s0YkLHg5peLN2/2R/ua5obnFaRR03JrNSf9w58ZSNyuzYUpmoR0wqqaO9XKDwcErGatWYtz65SoZuGtrfJ6shNG1qOOuJ+4tGpyVe5Rvf4njCjmeqxh/ZvvvO7N73gz7oJesC4VaMuUZMRz7rmdr1x+iNZuGzaO2lm8j2CxU4bjO0F53yj6MHj6q1s1NPmtHW15AmQa9fVqHSIgt0xlpZFEmwAjks/09RIIzqo7kC8yCIYtdMD/w1zTCmyFRGx6wAAAABJRU5ErkJggg==);
+      --ic-subs: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAB4AAAAcCAQAAADc8cciAAADQElEQVR4nHWU3YtUdRjHv2fmnJkdZxTGWZewXWh0i7XwJdBEIjcyu6poWaVCE4OV6qr6A1IIkeiuu17oJtDoIgtFpMlVqBg2db1YZGVdWBdJ98JwJQRnmpdP/J5zZubsTvt7OOf8Xp633/d8n8fDU2fQnqVVV0JNNZRUw2ZuJJbo2LJ7ZFRVoJrWq1cN+f+rI8mLInf8BUqoarNhHVFV3+hyLG4ztApzWMlrUgM6pB0qqKDjuqGmHtkFlg48E0WStLdPlvdZYIZxblPi7fapZ9/QxlN8gYcfqb3IPPPs5Tne5V9O214akWO1OTfxYzd2nty7Tzv0marap1uq6B/VNSCpX+t1V/ciPFZAe5V26YT69JVu6qECSRX52qb39ING1C+/g76Hi+Vie/JVU0ob9bUek3RQ1wz3IX2ip1RTXjk91KI+0uW2eRusHgJSPMGn3GOSMU4xRIBPgSLvMMm3HOAK9ymZXoqAoIVgxmBbx2GuM80efmeWU/SRN8e9DFEkyxgNruJ30HamPchQfIkFSmxlNfv5nhd4mTHWkiVLgNjJOeA72tmGvykwGaXMA44i1tLLZjZznus8zR5yBOT5nEXK7Iobi5QtX2OaO5xjKNpxLkYo8wy3eZ6AEWa5yBYypFtscGYu6Z38zN+UeNxWDgmnkKafj5njJG8yyTyvx1gm5CtQXRnt1ibd0gnVhFJWAHVJVf2l0yqqrOPq0Rn9Id/229x2Ed5glgsMGrMdCVuSJkGG7ZzkPj+yJR7VSUINPasjymlcFTVUVN7KMhxVNZXQoDZpXl9oSs14KzBq0cMHzDDDRUa5xDjDDBj5xRp8hpnjEhssKy8qI8XRzvIWUywwyzRlpjhmhwnSvEKZRT4kTTIq15i0PGXYywTn6eVV6pQi4yLXuMkvFrdVrOo29smwzf7xIHX+NNUCR1nkJzZEFa9IYmm7qXtCunts5A432M46RphgwhjlyBkXL/yGzaTTCALldVZVFfSrduuRjuk3NeSptrRtKkS97cdRMmAVKZ5klBnmqPBl1HKW3zbG7eUHrjQPUuYCW20nt5Kx6yTLOrm1+7TWqKkHkurtJLvS7u7boWJFVWtNSWtS3eY2/gNIFKP58eW6cgAAAABJRU5ErkJggg==);
+      --ic-settings: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAB4AAAAcCAQAAADc8cciAAAD0UlEQVR4nIXVW4xdUxgH8N/e58w5czodMzHTYih1a2qEUaWoe0UQkSBKPEhEXF6ExJsXb7yQiAchIRLxUPdLQj251WjEqLYuNb0OUb1oOy3TMZ2ZM/uTvU4rTSqxVvbJXmt//7X+3+1/svAfow0zCv8zqsfs5ArtenUncNhnr6n0duyILLIQlaik33qIWXFnrIyNsT82x4F4PZZFZ9TCv7O0STMLMqHSOkmhw2LPmOd3zbR3mhH3GjF9zL1ZNUEzMzLHafgLZzrbVx5LtHs97Qpn2WyOLmN2q5o54kLpc8UMrrbQHNv87lTjNtupkKlaa8CACeeaZ9ha6xKiPDgrwQ0VV3vE6cbU7THLLtsUxjXstcW45e7S8Ic7rPOUH8zIS6er6sbNdas+K40YcDrWWaVQNWHCtz5xisx6q13pZpusORyhdHNuicv97HnDznSyhrX+TNluU1htq0tN+t4Oa/S7xOWG5CbLaNVjIN6M3fFAiNkheuK4ELU4J26MC6Iv2kPk0ZP2jo9H45d4I3rSbq2k3e1c04ZJYdiX4n6b6y0wY5W3rTdlfyI64TdcopHWzapJB3znIrfrNHjYmwvdp9MuNTfo96JPHJLrtcgyf1jlkELNVAne4S0nWepST/rUjPkedIJ3vJoCeZMbDTmk13J367TWu8Za5VoGbI/P7fCYq5zsbxV95uN9W2zS5Q6L5ZjUoWal1/yYGmdanqslX49Pn5up1pqpaHoVGnKjGjqSzYSmk3Srm0zHFVW52e5yj6ZBv6XCGzFouVs1dLtZ5hW75Jp+tUW/J7zk3ZQqoj0uiPfip3g85secKNftsSxWxOr4Kb6OLfFSzIo8OiKL9rgsno0f46M4MXVVo6qQ6zFt0C8q2lMoBo26zhLTPvSxpqL0UGGNLtfrTJiiLM9po75yi35f6nZAhzb7rbPZ8wqVRK9L03TKw9KUqlJl8jJV7PSZ8y31tR0G9KsbMmyiZaDHAqep+9kG57nWr162LwUspWrKJkNu8LCdFjlBWOwFG9LXGZd5yBwHjRh2sXZf2K7WEoqqULfbCrmLzFWxXsMCF9qaDGZboM9Go+aZa9wHPk41WLI6fHPNRs8Z0G6v7a5xv96kn2UAe41bYchCfanPt8uSIBYtcJiS2eeb5GPVn8acbYmD2nSZpzBql1F1jMnSTLJcgrN0QMXBRKhmpz0WWShXT329wbbE4+9UlqX1YUUv1fPIaGlZps0y5ztDA+PWW2Vr0s4yt/UjlI8Gt+S3BLdWeWrOUidLg/IpbzxieZR6thT73/OOIvZffzhHUf0HVKifx3rNyfAAAAAASUVORK5CYII=);
+      --ic-search: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAB4AAAAcCAQAAADc8cciAAAC4klEQVR4nJWUX0hTYRjGf+dsa8akVQMlVxZeDFQKFCcZGAlFXQh150UXQUG3QfdddN1lQVcRWRd1EUVCClEQBhKBgpah5JAibYtVI0cz55443852zraEeg7n8H3ne/8+7/t+lvDBAmxgk39C8K9/k8SNkTxLLFOsMS6fr+rapgQcZJBOjhInBqSY5AVzfCZDwEjVxOQpO+r9XGCQCN/I0QwEaGYbOSa4wyLFhnTkPX16pJ/6rtvq107FFNMhndNdreqrrquzKheurLycD3KBBA8ZZ5IMUU6QYJ45xhngMgOskOcjATZ9HLhWunVDbzWmbnd/RPf0RQu6pxHFdVHP9UHnhYJCgYpn2+VwN0ky3GQBC4vtpHjANWZIcIWLTDAK9NNmvHqZGxs7dVmfdFUBWUKWQgoJhbRXl/RBr9WlHj3VS42YU8vz7HhqZ5Am3rBJGMsUZcO8aV5xhxnaWGGWVoaIEnCLVvXcrTmtqc21aHu2TZatCius4/qu12qR7c/ZsePYW6ypoMNDBQXWKbJG1uxK/vZ0xH5RYI28+893bHYF83WKmjOt5GtKB2myxOlwe72+3zewsIkQIWvYrkZlUyRInmly9BI2h14TlBFCRBkkzSQ5SvWec8wTIGmGod5vyTCf4ARveMwmNqFaZZhmhjj9tPoKUZEQ+zhDlFlDmY8R2w1zkftkOUOyTtWRaGGILhZ5xXq1B1y2y1hniiDDjNDDBCm3LE3E6CBJL7uYZ7tpzfLc1yg7pE0S5DAJIrwnS4E8MdrpIsYqOZoYZp1Z0xvF+sugXKROTrGfNqImnSBZMqR5QpazHGOOWywY6WL9TVJGjAi9dBAhSIEUKVbIsMEBTtPLFGOsVgJvVPZSsarUOLSW2MMwPbxjgqXyVdioXO6fwF+Ut9HMSfrIMkraCbxSZw/OuDis+q+bkgn0N9+YYp4d9LkD1xj1FrAQFss84wdLFcL8w1cRq52rLdEY9n/gDwLeUDfoKOVEAAAAAElFTkSuQmCC);
+
+      --dim: #9c91ad;          /* unselected nav label + icon  */
+      --dimmer: #464151;       /* "Search" row                 */
+      --label: #d4c9e8;        /* row headings + counter       */
+      --clock: #e8e2f6;        /* clock + top-bar text         */
+      --onpill: #140628;       /* selected nav label on pill   */
+      --ring: #c9c9cd;         /* focus ring                   */
+      --ui: "RokuText", "Gotham SSm A", "Gotham", "Segoe UI", system-ui, sans-serif;
+
+      --content-x: 590px;      /* content column, sidebar focused */
+      --icon-x: 86px;
+
+      /* Timings measured off the 60fps capture. The UI renders at 30fps, so
+         each transition lands as nine discrete steps; fitting those gives
+         cubic-bezier(.30,.82,.62,1) with an rmse of 0.002 over two
+         independent scrolls. Scroll/ring/reflow run 300ms; the sidebar
+         collapse in ref_01.mp4 measures nearer 200ms. */
+      --ease: cubic-bezier(.3, .82, .62, 1);
+      --dur: .3s;              /* scroll, ring, row reflow     */
+      --zdur: .2s;             /* sidebar <-> content          */
+      --fade: .07s;            /* chrome fading in             */
+      --fadeout: .05s;         /* text clearing before a swap  */
+    }
+
+    * { box-sizing: border-box; }
+
+    html, body {
+      margin: 0;
+      letter-spacing: -.03em;   /* matches the reference's tracking */
+      height: 100%;
+      background: #000;
+      overflow: hidden;
+      font-family: var(--ui);
+      color: #fff;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    #fit { position: fixed; inset: 0; overflow: hidden; }
+
+    .stage {
+      position: absolute;
+      left: 0;
+      top: 0;
+      width: 1280px;
+      height: 720px;
+      transform-origin: 0 0;
+      overflow: hidden;
+      user-select: none;
+      background: #000;
+    }
+
+    .stage:focus { outline: none; }
+
+    /* focus inside the content area: the rail collapses and the rows slide left */
+    .stage[data-zone="content"] {
+      --content-x: 156px;
+      --icon-x: 66px;
+    }
+
+    .screen {
+      position: absolute;
+      inset: 0;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity .18s ease;
+    }
+
+    .screen.on { opacity: 1; pointer-events: auto; }
+
+    /* ---------- home background (radial profile sampled from the ref) ---- */
+
+    #home {
+      background: radial-gradient(circle 760px at 50% 0%,
+          #6c2ac4 0px, #6027b3 70px, #5e26ab 90px, #5b23a6 110px,
+          #5722a1 130px, #541f9a 150px, #4f1e93 170px, #4d1d8b 190px,
+          #491a85 210px, #441b7f 230px, #421775 250px, #3a1a70 270px,
+          #391669 290px, #361464 310px, #31155e 330px, #2d1156 350px,
+          #2b1052 370px, #290e4c 390px, #240d47 410px, #200b43 430px,
+          #1e0c3c 450px, #1a0838 470px, #190931 490px, #14072c 510px,
+          #130629 530px, #110525 550px, #100520 570px, #0d041e 590px,
+          #09031a 610px, #070116 630px, #060113 660px, #050012 690px,
+          #04000f 710px, #03010d 750px);
+    }
+
+    /* ---------- top bar -------------------------------------------------- */
+
+    .wordmark {
+      position: absolute;
+      left: 64px;
+      top: 38px;
+      width: 100px;
+      height: 38px;
+      pointer-events: none;
+    }
+
+    .crumb {
+      position: absolute;
+      left: 174px;
+      top: 36px;
+      height: 38px;
+      display: flex;
+      align-items: center;
+      gap: 15px;
+      font-size: 29px;
+      font-weight: 400;
+      color: #fff;
+      white-space: nowrap;
+      opacity: 0;
+      transition: opacity var(--fade) linear;
+    }
+
+    .stage[data-zone="content"] .crumb { opacity: 1; }
+
+    .dot { color: #7c7290; font-size: 12px; line-height: 0; }
+
+    .topright {
+      position: absolute;
+      right: 64px;
+      top: 33px;
+      height: 38px;
+      display: flex;
+      align-items: center;
+      gap: 11px;
+      font-size: 21px;
+      color: var(--clock);
+      white-space: nowrap;
+    }
+
+    .optshint {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      opacity: 0;
+      transition: opacity var(--fade) linear;
+    }
+
+    .stage[data-zone="content"] .optshint { opacity: 1; }
+    .optshint .star { font-size: 25px; line-height: 0; position: relative; top: 2px; }
+
+    /* ---------- sidebar --------------------------------------------------- */
+
+    /* The sidebar is an endless carousel: the selected row parks at y=161
+       and the list runs on past Settings, back round to Home, with a rule
+       marking the seam. Nothing is drawn above the selected row, and the
+       column fades out below (measured: full to y=399, gone by y=507),
+       which is why the last visible row looks dimmed. */
+    .sidebar {
+      position: absolute;
+      inset: 0;
+      -webkit-mask-image: linear-gradient(to bottom, transparent 160px, #000 160px, #000 399px, transparent 507px);
+      mask-image: linear-gradient(to bottom, transparent 160px, #000 160px, #000 399px, transparent 507px);
+    }
+
+    .navstrip {
+      position: absolute;
+      left: 0;
+      top: 161px;
+      width: 100%;
+      transition: transform var(--zdur) var(--ease);
+    }
+
+    .navstrip.nojump { transition: none; }
+
+    .navseam {
+      position: absolute;
+      left: 79px;
+      width: 436px;
+      height: 2px;
+      background: rgba(255, 255, 255, .3);
+    }
+
+    .navitem {
+      position: absolute;
+      left: 64px;
+      width: 466px;
+      height: 56px;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: width var(--zdur) var(--ease);
+    }
+
+    .stage[data-zone="content"] .navitem { width: 56px; }
+
+    .navitem .ic {
+      position: absolute;
+      left: calc(var(--icon-x) - 64px);
+      top: 13px;
+      width: 30px;
+      height: 28px;
+      background-color: var(--dim);
+      -webkit-mask-repeat: no-repeat;
+      mask-repeat: no-repeat;
+      -webkit-mask-size: 30px 28px;
+      mask-size: 30px 28px;
+      transition: left var(--zdur) var(--ease);
+    }
+
+    .navitem .tx {
+      position: absolute;
+      left: 69px;
+      top: 0;
+      height: 56px;
+      line-height: 56px;
+      font-size: 24px;
+      color: var(--dim);
+      white-space: nowrap;
+      transition: opacity var(--fade) linear;
+    }
+
+    .stage[data-zone="content"] .navitem .tx { opacity: 0; }
+
+    .navitem.sel {
+      background: linear-gradient(180deg, #cdcccf 0%, #bfc0c3 55%, #bbbbbb 100%);
+      box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .35);
+    }
+
+    .navitem.sel .ic { background-color: var(--onpill); }
+    .navitem.sel .tx { color: var(--onpill); }
+    .stage[data-zone="content"] .navitem.sel { background: none; box-shadow: none; }
+    .stage[data-zone="content"] .navitem.sel .ic { background-color: #fff; }
+
+    /* ---------- content --------------------------------------------------- */
+
+    /* Rows scroll up and disappear behind y=160 -- the line the focused row
+       parks on. Measured: no row pixel is ever drawn above it, while the
+       heading, counter and focus ring all are, so those sit outside. */
+    .viewport {
+      position: absolute;
+      left: var(--content-x);
+      top: 0;
+      width: 624px;
+      height: 720px;
+      clip-path: inset(160px 0 0 0);
+      transition: left var(--zdur) var(--ease);
+    }
+
+    .chrome {
+      position: absolute;
+      left: var(--content-x);
+      top: 0;
+      width: 624px;
+      height: 720px;
+      pointer-events: none;
+      transition: left var(--zdur) var(--ease);
+    }
+
+    .fxlabel {
+      position: absolute;
+      left: 1px;
+      top: 130px;
+      font-size: 18px;
+      line-height: 18px;
+      color: var(--label);
+      white-space: nowrap;
+      transition: opacity var(--fadeout) linear;
+    }
+
+    #content {
+      position: absolute;
+      left: 0;
+      top: 0;
+      width: 624px;
+      transition: transform var(--dur) var(--ease);
+    }
+
+    #content.nojump { transition: none; }
+
+    .row { position: absolute; left: 0; width: 624px; transition: top var(--dur) var(--ease); }
+    #content.nojump .row { transition: none; }
+
+    .rowlabel {
+      transition: opacity var(--fadeout) linear;
+      position: absolute;
+      left: 1px;
+      top: -30px;
+      font-size: 18px;
+      line-height: 18px;
+      color: var(--label);
+      white-space: nowrap;
+    }
+
+    .counter {
+      position: absolute;
+      right: 0;
+      top: 130px;
+      font-size: 18px;
+      line-height: 18px;
+      color: var(--label);
+      white-space: nowrap;
+      display: none;
+    }
+
+    .counter.on { display: block; }
+
+    .grid { position: relative; }
+
+    .tile {
+      position: absolute;
+      cursor: pointer;
+      border-radius: 2px;
+    }
+
+    .tile img { display: block; width: 100%; height: 100%; border-radius: 2px; }
+
+    .tile.fx .play { opacity: 1; }
+
+    /* The ring is one element that slides and resizes between tiles rather
+       than appearing on each one (measured in the capture: it travels with
+       the same curve as the scroll). */
+    .ring {
+      position: absolute;
+      border: 5px solid var(--ring);
+      border-radius: 7px;
+      pointer-events: none;
+      opacity: 0;
+      z-index: 4;
+      transition: left var(--dur) var(--ease), top var(--dur) var(--ease),
+                  width var(--dur) var(--ease), height var(--dur) var(--ease),
+                  opacity var(--fade) linear;
+    }
+
+    .ring.on { opacity: 1; }
+    .ring.nojump { transition: opacity var(--fade) linear; }
+
+    .play {
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      width: 66px;
+      height: 66px;
+      margin: -33px 0 0 -33px;
+      border-radius: 50%;
+      border: 3px solid rgba(233, 233, 240, .92);
+      background: rgba(0, 0, 0, .3);
+      opacity: 0;
+      transition: opacity var(--fade) linear;
+      pointer-events: none;
+    }
+
+    .play::after {
+      content: "";
+      position: absolute;
+      left: 23px;
+      top: 16px;
+      border-left: 22px solid #fff;
+      border-top: 14px solid transparent;
+      border-bottom: 14px solid transparent;
+    }
+
+    /* programme info under the focused row */
+
+    .metabox { position: absolute; left: 0; width: 624px; display: none; transition: opacity var(--fadeout) linear; }
+    .row.fxrow .metabox.on { display: block; }
+    .metabox i { font-style: normal; font-size: 9px; position: relative; top: -4px; padding: 0 1px; }
+    .metabox .t { position: absolute; left: 0; top: 0; font-size: 22px; font-weight: 500; line-height: 22px; white-space: nowrap; }
+    .metabox .s { position: absolute; left: 0; top: 30px; font-size: 18px; line-height: 18px; color: #bdb5cb; white-space: nowrap; }
+
+    /* ---------- the unfilled promo panel on the right -------------------- */
+
+    .promo {
+      position: absolute;
+      left: 865px;
+      top: 164px;
+      width: 344px;
+      height: 482px;
+      border: 4px solid rgba(255, 255, 255, .145);
+      background: rgba(37, 33, 51, .69);
+      background-clip: padding-box;
+      opacity: 0;
+      transition: opacity .13s linear;
+      pointer-events: none;
+    }
+
+    .stage[data-zone="content"] .promo { opacity: 1; }
+
+
+    /* ---------- sidebar preview panes --------------------------------------
+       Each sidebar row has its own pane, shown as soon as the row is
+       highlighted -- no OK needed. The capture shows no cross-fade: the old
+       pane clears at once, then the heading appears and the body follows it
+       about 130ms later. That gap is the device fetching content (measured
+       370-570ms across the eight moves in sidebar-scroll.mp4), so it lives in
+       one constant below. */
+
+    .panes { position: absolute; inset: 0; pointer-events: none; }
+    #home.offhome .viewport, #home.offhome .chrome, #home.offhome .promo { display: none; }
+
+    .pane {
+      position: absolute;
+      left: 590px;
+      top: 0;
+      width: 690px;
+      height: 720px;
+      display: none;
+    }
+
+    .pane.on { display: block; }
+    .pane[data-stage="0"] .phead, .pane[data-stage="0"] .pbody,
+    .pane[data-stage="1"] .pbody { visibility: hidden; }
+
+    .phead {
+      position: absolute;
+      left: 1px;
+      top: 152px;
+      font-size: 38px;
+      font-weight: 500;
+      line-height: 38px;
+      color: #fff;
+      white-space: nowrap;
+    }
+
+    .psub {
+      position: absolute;
+      left: 1px;
+      font-size: 18px;
+      line-height: 18px;
+      color: var(--label);
+      white-space: nowrap;
+    }
+
+    .ptile { position: absolute; }
+    .ptile img { display: block; width: 100%; height: 100%; }
+
+    .pskel { position: absolute; background: rgba(255, 255, 255, .055); border-radius: 2px; }
+
+    .pcard {
+      position: absolute;
+      left: 0;
+      width: 690px;
+      background: #070027;
+      border-radius: 3px;
+      overflow: hidden;
+    }
+
+    .pcard .pc-ico {
+      position: absolute;
+      background-color: rgba(255, 255, 255, .34);
+      -webkit-mask-repeat: no-repeat;
+      mask-repeat: no-repeat;
+      -webkit-mask-size: 100% 100%;
+      mask-size: 100% 100%;
+    }
+    .pcard .pc-t { position: absolute; top: 46px; font-size: 28px; font-weight: 500; color: #fff; white-space: nowrap; }
+    .pcard .pc-s { position: absolute; top: 83px; font-size: 20px; color: var(--label); white-space: nowrap; }
+
+    .plist { position: absolute; left: -10px; top: 160px; width: 508px; }
+
+    .plist div {
+      height: 48px;
+      line-height: 48px;
+      padding: 0 20px;
+      font-size: 21px;
+      color: #ddd6e8;
+      border-radius: 5px;
+      white-space: nowrap;
+    }
+
+    .plist div:first-child { background: rgba(255, 255, 255, .13); color: #fff; }
+
+    .psbox {
+      position: absolute;
+      border-radius: 4px;
+      background: rgba(255, 255, 255, .11);
+      font-size: 22px;
+      color: #cdc4de;
+      padding: 0 18px;
+      line-height: 39px;
+    }
+
+    .pkey {
+      position: absolute;
+      width: 41px;
+      height: 38px;
+      border-radius: 3px;
+      background: rgba(255, 255, 255, .11);
+      color: #efeaf6;
+      font-size: 21px;
+      line-height: 38px;
+      text-align: center;
+    }
+
+    .pbox {
+      position: absolute;
+      border-radius: 3px;
+      box-shadow: inset 0 0 0 2px rgba(255, 255, 255, .13);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 21px;
+      font-weight: 500;
+      color: #fff;
+      text-align: center;
+    }
+
+    .pchip {
+      position: absolute;
+      border-radius: 4px;
+      box-shadow: inset 0 0 0 2px rgba(255, 255, 255, .16);
+      padding: 16px 20px;
+      font-size: 19px;
+      color: var(--label);
+    }
+
+    .pchip b { display: block; font-weight: 400; color: #fff; font-size: 21px; margin-top: 7px; }
+
+    .pchip.centre {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 0;
+      gap: 4px;
+    }
+
+    .pchip.centre b { font-size: 19px; font-weight: 500; margin: 0; }
+
+    .chip-ico {
+      width: 50px;
+      height: 50px;
+      background-color: #fff;
+      -webkit-mask-repeat: no-repeat;
+      mask-repeat: no-repeat;
+      -webkit-mask-size: 100% 100%;
+      mask-size: 100% 100%;
+    }
+
+    /* ---------- secondary screens ---------------------------------------- */
+
+    .pad { position: absolute; inset: 0; padding: 38px 64px; }
+    .pagetitle { display: flex; align-items: center; gap: 15px; height: 38px; font-size: 24px; }
+    .pagetitle img { width: 100px; height: 38px; }
+
+    #launch { background: #000; }
+
+    .splash {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-direction: column;
+      gap: 28px;
+    }
+
+    .splash .mark { font-size: 50px; font-weight: 700; }
+
+    .spin {
+      width: 42px;
+      height: 42px;
+      border-radius: 50%;
+      border: 3px solid rgba(255, 255, 255, .16);
+      border-top-color: #fff;
+      animation: spin .8s linear infinite;
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    #app { background: #07060c; }
+
+    .appstage {
+      position: absolute;
+      inset: 90px 64px 64px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-direction: column;
+      gap: 18px;
+      text-align: center;
+    }
+
+    .appstage .big { font-size: 44px; font-weight: 700; }
+    .appstage .sub { color: var(--dim); font-size: 19px; max-width: 660px; line-height: 1.55; }
+    kbd { background: #221a2e; border: 1px solid #3a2f4d; border-radius: 4px; padding: 2px 7px; font: inherit; font-size: .85em; }
+
+    #inputs, #search {
+      background: radial-gradient(circle 760px at 50% 0%, #4d1d8b 0px, #2d1156 350px, #0d041e 590px, #03010d 750px);
+    }
+
+    .inputgrid { display: grid; grid-template-columns: repeat(4, 240px); gap: 22px; margin-top: 46px; }
+
+    .inputcard {
+      height: 150px;
+      border-radius: 6px;
+      background: rgba(255, 255, 255, .07);
+      box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .1);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-direction: column;
+      gap: 8px;
+      font-size: 22px;
+      cursor: pointer;
+    }
+
+    .inputcard small { color: var(--dim); font-size: 15px; }
+    .inputcard.fx { box-shadow: 0 0 0 4px #fff; background: rgba(255, 255, 255, .14); }
+
+    .searchbox {
+      margin-top: 30px;
+      width: 760px;
+      height: 58px;
+      border-radius: 5px;
+      background: rgba(0, 0, 0, .33);
+      box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .16);
+      display: flex;
+      align-items: center;
+      padding: 0 20px;
+      font-size: 24px;
+    }
+
+    .searchbox .caret { width: 2px; height: 28px; background: #fff; margin-left: 3px; animation: blink 1s steps(1) infinite; }
+    @keyframes blink { 50% { opacity: 0; } }
+    .ph { color: #6b6280; }
+
+    .keys { display: grid; grid-template-columns: repeat(10, 58px); gap: 9px; margin-top: 30px; }
+
+    .key {
+      height: 50px;
+      border-radius: 4px;
+      background: rgba(255, 255, 255, .08);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 21px;
+      cursor: pointer;
+    }
+
+    .key.wide { grid-column: span 2; font-size: 15px; }
+    .key.fx { background: linear-gradient(180deg, #cdcccf, #bcbcbc); color: var(--onpill); }
+
+    .results { margin-top: 26px; color: var(--dim); font-size: 18px; }
+
+    #options { background: rgba(5, 2, 10, .6); }
+
+    .sheet {
+      position: absolute;
+      top: 0;
+      right: 0;
+      bottom: 0;
+      width: 430px;
+      background: linear-gradient(180deg, #2a1340, #160923);
+      box-shadow: -20px 0 50px rgba(0, 0, 0, .55);
+      padding: 56px 36px;
+      transform: translateX(100%);
+      transition: transform .22s cubic-bezier(.3, .7, .2, 1);
+    }
+
+    #options.on .sheet { transform: none; }
+    .sheet h2 { margin: 0 0 6px; font-size: 28px; font-weight: 600; }
+    .sheet .sub { color: var(--dim); font-size: 16px; margin-bottom: 26px; }
+
+    .opt {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 15px 18px;
+      border-radius: 5px;
+      font-size: 20px;
+      color: #e5dff0;
+      cursor: pointer;
+    }
+
+    .opt b { font-weight: 400; color: var(--dim); font-size: 17px; }
+    .opt.fx { background: linear-gradient(180deg, #cdcccf, #bcbcbc); color: var(--onpill); }
+    .opt.fx b { color: #4a3161; }
+
+    #saver { background: #000; }
+
+    .bounce {
+      position: absolute;
+      left: 0;
+      top: 0;
+      padding: 16px 26px;
+      border-radius: 10px;
+      background: #662d91;
+      will-change: transform;
+    }
+
+    .bounce img { display: block; width: 100px; height: 38px; }
+  </style>
+</head>
+
+<body>
+
+  <div id="fit">
+    <div class="stage" id="stage" tabindex="0" data-zone="nav" aria-label="Roku screen">
+
+      <!-- ===================== HOME ===================== -->
+      <section class="screen on" id="home">
+
+        <img class="wordmark" src="img/wordmark.png" alt="Roku">
+        <div class="crumb"><span class="dot">&#9679;</span><span id="crumbName">Home</span></div>
+        <div class="topright">
+          <span class="optshint"><span class="star">&#10033;</span>for Options<span class="dot">&#9679;</span></span>
+          <span id="clock">5:30 pm</span>
+        </div>
+
+        <nav class="sidebar" id="sidebar"></nav>
+        <div class="viewport" id="viewport"><div id="content"></div></div>
+        <div class="chrome" id="chrome"></div>
+        <aside class="promo"></aside>
+        <div class="panes" id="panes"></div>
+      </section>
+
+      <!-- ===================== LAUNCH ===================== -->
+      <section class="screen" id="launch">
+        <div class="splash">
+          <div class="mark" id="launchMark">Netflix</div>
+          <div class="spin"></div>
+        </div>
+      </section>
+
+      <!-- ===================== CHANNEL ===================== -->
+      <section class="screen" id="app">
+        <div class="pad">
+          <div class="pagetitle"><img src="img/wordmark.png" alt="Roku"><span class="dot">&#9679;</span><span id="appName">Netflix</span></div>
+        </div>
+        <div class="appstage">
+          <div class="big" id="appBig">Netflix</div>
+          <div class="sub" id="appSub"></div>
+        </div>
+      </section>
+
+      <!-- ===================== TV INPUTS ===================== -->
+      <section class="screen" id="inputs">
+        <div class="pad">
+          <div class="pagetitle"><img src="img/wordmark.png" alt="Roku"><span class="dot">&#9679;</span><span>TV Inputs</span></div>
+          <div class="inputgrid" id="inputGrid"></div>
+          <p style="color:#9c91ad;margin-top:34px;font-size:17px">Select an input to switch sources. Press <kbd>Esc</kbd> to return home.</p>
+        </div>
+      </section>
+
+      <!-- ===================== SEARCH ===================== -->
+      <section class="screen" id="search">
+        <div class="pad">
+          <div class="pagetitle"><img src="img/wordmark.png" alt="Roku"><span class="dot">&#9679;</span><span>Search</span></div>
+          <div class="searchbox"><span id="query" class="ph">Search for movies, TV shows, actors</span><span class="caret"></span></div>
+          <div class="keys" id="keys"></div>
+          <div class="results" id="results">Start typing to see results.</div>
+        </div>
+      </section>
+
+      <!-- ===================== OPTIONS ===================== -->
+      <section class="screen" id="options">
+        <div class="sheet">
+          <h2>Options</h2>
+          <div class="sub" id="optCtx">Home screen</div>
+          <div id="optList"></div>
+        </div>
+      </section>
+
+      <!-- ===================== SCREENSAVER ===================== -->
+      <section class="screen" id="saver">
+        <div class="bounce" id="bounce"><img src="img/wordmark.png" alt="Roku"></div>
+      </section>
+
+    </div>
+  </div>
+
+  <script>
+    (function () {
+      'use strict';
+
+      var $ = function (id) { return document.getElementById(id); };
+      var stage = $('stage');
+
+      var GRID_TOP = 160;      /* first row, and where the focused row parks */
+      var LABEL_GAP = 30;      /* label ink top above its grid               */
+      var ROW_GAP = 73;        /* grid bottom -> next grid top               */
+      var META_H = 56;         /* programme-info block                       */
+
+      /* ---------------- sidebar ---------------- */
+
+      var NAV = [
+        { id: 'home', label: 'Home', icon: 'ic-home' },
+        { id: 'inputs', label: 'TV Inputs', icon: 'ic-inputs' },
+        { id: 'sports', label: 'Sports', icon: 'ic-sports' },
+        { id: 'livetv', label: 'Live TV', icon: 'ic-livetv' },
+        { id: 'foryou', label: 'For You', icon: 'ic-foryou' },
+        { id: 'search', label: 'Search', icon: 'ic-search' },
+        { id: 'store', label: 'Streaming Store', icon: 'ic-store' },
+        { id: 'subs', label: 'Subscriptions', icon: 'ic-subs' },
+        { id: 'settings', label: 'Settings', icon: 'ic-settings' }
+      ];
+
+      /* carousel metrics, measured from sidebar-scroll.mp4 */
+      var NAV_STEP = 56;                        /* row pitch                 */
+      var NAV_SEAM = 10;                        /* rule, after the last row  */
+      var NAV_GAP = 22;                         /* extra space at the seam   */
+      var NAV_COPIES = 5;                       /* room to drift while held  */
+      var NAV_H = NAV.length * NAV_STEP + NAV_GAP;
+
+      function navY(i) {
+        return Math.floor(i / NAV.length) * NAV_H + (i % NAV.length) * NAV_STEP;
+      }
+
+      /* ---------------- rows ----------------
+         cols   : width of each column
+         tileH  : tile height            nRows : visual rows in this block
+         mode   : 'row'  -> the heading stays the row name and the focused
+                            programme is described under the grid
+                  'tile' -> the heading becomes the focused tile's name and
+                            an "n of m" counter appears on the right
+         Tiles carry their grid cell; `tall` spans every visual row.
+         Programme info marked INVENTED was never shown in the captures. */
+
+      var ROWS = [
+        {
+          id: 'picks', label: 'Top Picks for You', mode: 'row',
+          cols: [210, 210, 172], tileH: 118, colGap: 16, rowGap: 18, nRows: 2,
+          tiles: [
+            { img: 'virginian', title: 'The Virginian', col: 0, row: 0, meta: 'S4 E19 <i>&#9679;</i> TVPG <i>&#9679;</i> 6:57 pm - 8:22 pm' },
+            { img: 'westerns', title: 'Wagon Train', col: 1, row: 0, meta: 'S7 E15 <i>&#9679;</i> TVPG <i>&#9679;</i> 5:44 pm - 7:11 pm' },
+            { img: 'livetv', title: 'Live TV', col: 2, row: 0, tall: true },
+            { img: 'rawhide', title: 'Rawhide', col: 0, row: 1, meta: 'S5 E18 <i>&#9679;</i> TVPG <i>&#9679;</i> 7:00 pm - 8:00 pm' },
+            { img: 'grit', title: 'The Rifleman', col: 1, row: 1, meta: 'S3 E07 <i>&#9679;</i> TVPG <i>&#9679;</i> 6:30 pm - 7:00 pm' } /* INVENTED */
+          ]
+        },
+        {
+          id: 'quick', label: 'Quick Access', mode: 'tile',
+          cols: [144, 144, 144, 144], tileH: 108, colGap: 16, rowGap: 15, nRows: 4,
+          tiles: cells([
+            ['guide', 'Live TV Guide'], ['netflix', 'Netflix'], ['prime', 'Prime Video'], ['hulu', 'Hulu'],
+            ['kids', 'Kids &amp; Family on The Roku Channel'], ['fandango', 'Fandango at Home'], ['howdy', 'Howdy'], ['rokuchannel', 'The Roku Channel'],
+            ['frndly', 'Frndly TV'], ['sling', 'Sling'], ['backdrops', 'Backdrops'], ['qa-foryou', 'For You'],
+            ['romance', 'Romance'], ['documentary', 'Documentary'], ['subscriptions', 'Subscriptions'], ['savelist', 'Save List']
+          ], 4)
+        },
+        {
+          id: 'ynw', label: 'Your Next Watch', mode: 'row',
+          cols: [172, 210, 210], tileH: 118, colGap: 16, rowGap: 18, nRows: 2,
+          tiles: [
+            { img: 'ynw-foryou', title: 'For You', col: 0, row: 0, tall: true },
+            /* the programme lines below were never on screen in the captures */
+            { img: 'littlehouse', title: 'Little House on the Prairie', col: 1, row: 0, meta: 'S6 E11 <i>&#9679;</i> TVPG <i>&#9679;</i> 6:00 pm - 7:00 pm' },
+            { img: 'filmrise', title: 'FilmRise Western', col: 2, row: 0, meta: 'Live <i>&#9679;</i> TVPG <i>&#9679;</i> 6:45 pm - 8:30 pm' },
+            { img: 'livenow', title: 'LiveNOW from FOX', col: 1, row: 1, meta: 'Live <i>&#9679;</i> TVG <i>&#9679;</i> 24 hours' },
+            { img: 'hillbillies', title: 'The Beverly Hillbillies', col: 2, row: 1, meta: 'S2 E04 <i>&#9679;</i> TVG <i>&#9679;</i> 6:30 pm - 7:00 pm' }
+          ]
+        },
+        {
+          id: 'mood', label: 'What Are You in the Mood For?', mode: 'tile',
+          cols: [144, 144, 144, 144], tileH: 216, colGap: 16, rowGap: 16, nRows: 2,
+          tiles: cells([
+            ['mood-kids', 'Kids &amp; Family'], ['mood-western', 'Western'], ['mood-horror', 'Horror'], ['mood-comedy', 'Comedy'],
+            ['mood-movies', 'Movies'], ['mood-anime', 'Anime'], ['mood-tvshows', 'TV Shows'], ['mood-more', 'More']
+          ], 4)
+        },
+        {
+          id: 'best', label: 'The Best Across Your Streaming Services', mode: 'tile',
+          cols: [112, 112, 112, 112, 112], tileH: 84, colGap: 16, rowGap: 16, nRows: 1,
+          tiles: cells([
+            ['best-livetv', 'Live TV'], ['best-free', 'Free'], ['best-sports', 'Sports'],
+            ['best-foryou', 'For You'], ['best-subs', 'Subscriptions']
+          ], 5)
+        },
+        {
+          id: 'jump', label: 'Jump To', mode: 'tile',
+          cols: [144, 144, 144, 144], tileH: 108, colGap: 16, rowGap: 16, nRows: 1,
+          tiles: cells([
+            ['jump-continue', 'Continue Watching'], ['jump-search', 'Search'],
+            ['jump-savelist', 'Save List'], ['jump-tvoff', 'TV Off']
+          ], 4)
+        },
+        {
+          id: 'apps', label: 'Your Apps', mode: 'tile',
+          cols: [144, 144, 144, 144], tileH: 108, colGap: 16, rowGap: 15, nRows: 3,
+          tiles: cells([
+            ['guide', 'Live TV Guide'], ['netflix', 'Netflix'], ['prime', 'Prime Video'], ['hulu', 'Hulu'],
+            ['kids', 'Kids &amp; Family on The Roku Channel'], ['fandango', 'Fandango at Home'], ['howdy', 'Howdy'], ['rokuchannel', 'The Roku Channel'],
+            ['frndly', 'Frndly TV'], ['sling', 'Sling'], ['backdrops', 'Backdrops'], ['addapps', 'Add Apps']
+          ], 4)
+        }
+      ];
+
+      function cells(list, perRow) {
+        var out = [], i;
+        for (i = 0; i < list.length; i++) {
+          out.push({ img: list[i][0], title: list[i][1], col: i % perRow, row: Math.floor(i / perRow) });
+        }
+        return out;
+      }
+
+
+      /* ---------------- sidebar panes ----------------
+         Laid out in pane coordinates (x0 = the content column at 590).
+         Measured from sidebar-scroll.mp4: heading ink at y159, sublabel ink
+         28px above its row, rows 153-288 tall depending on the pane. */
+
+      var PANE_BLANK = 480;    /* measured 370-570ms; set to 0 for instant */
+      var PANE_BODY = 130;     /* body follows the heading by this much    */
+
+      function skel(y) { return { t: 'skel', y: y, w: 272, h: 152, n: 3, step: 288 }; }
+
+      var PANES = {
+        inputs: [ skel(128), { t: 'img', src: 'inputs-card', x: 0, y: 166, w: 608, h: 360 } ],
+
+        sports: [ skel(128), { t: 'h', s: 'Sports' } ],
+
+        livetv: [
+          { t: 'h', s: 'Live TV' }, { t: 's', y: 204, s: 'Featured' },
+          { t: 'img', src: 'lt-guide', x: 0, y: 234, w: 419, h: 288 },
+          { t: 'img', src: 'lt-ae', x: 434, y: 234, w: 256, h: 288 },
+          skel(590)
+        ],
+
+        foryou: [
+          { t: 'h', s: 'TV, Movies &amp; More' }, { t: 's', y: 204, s: 'Top Picks for You' },
+          { t: 'img', src: 'fy-1', x: 0, y: 234, w: 274, h: 154 },
+          { t: 'img', src: 'fy-2', x: 288, y: 234, w: 274, h: 154 },
+          { t: 'img', src: 'fy-3', x: 576, y: 234, w: 114, h: 154 },
+          { t: 's', y: 476, s: 'Continue Watching and Save List' },
+          { t: 'card', y: 504, h: 155, ico: 'ico-tray', ix: 54, iy: 30, iw: 144, ih: 118, tx: 241, sx: 236,
+            title: 'You haven&rsquo;t watched or saved anything yet',
+            sub: 'Search for movies or shows to watch or add to your Save List' }
+        ],
+
+        search: [
+          { t: 'sbox', x: -14, y: 164, w: 259, h: 39, s: 'Search genres' },
+          { t: 'keys', x: -14, y: 226 },
+          { t: 's', x: 287, y: 132, s: 'Recent Search Selections' },
+          { t: 'img', src: 'se-youtube', x: 287, y: 165, w: 204, h: 146 },
+          { t: 'box', x: 506, y: 165, w: 184, h: 146, s: 'Clear All' },
+          { t: 's', x: 287, y: 343, s: 'Recommendations from STARZ on The Roku Channel' },
+          { t: 'img', src: 'se-starz', x: 287, y: 368, w: 204, h: 151 },
+          { t: 'img', src: 'se-michael', x: 506, y: 368, w: 184, h: 151 },
+          { t: 's', x: 287, y: 543, s: 'Search Suggestions for You' },
+          { t: 'img', src: 'se-peppa', x: 287, y: 573, w: 304, h: 138 },
+          { t: 'box', x: 606, y: 573, w: 84, h: 138, s: 'Animated<br>Comedy' }
+        ],
+
+        store: [
+          { t: 'h', s: 'Shop Apps, Movies &amp; TV' }, { t: 's', y: 204, s: 'Trending on AMC+' },
+          { t: 'img', src: 'st-a1', x: 0, y: 234, w: 205, h: 153 },
+          { t: 'img', src: 'st-a2', x: 220, y: 234, w: 273, h: 153 },
+          { t: 'img', src: 'st-a3', x: 508, y: 234, w: 182, h: 153 },
+          { t: 's', y: 428, s: 'Trending on discovery+' },
+          { t: 'img', src: 'st-b1', x: 0, y: 457, w: 205, h: 153 },
+          { t: 'img', src: 'st-b2', x: 220, y: 457, w: 273, h: 153 },
+          { t: 'img', src: 'st-b3', x: 508, y: 457, w: 182, h: 153 },
+          { t: 's', y: 653, s: 'Recommended Apps' }, skel(681)
+        ],
+
+        subs: [
+          { t: 'chip', x: 0, y: 131, w: 156, h: 114, centre: true, ico: 'ico-find', b: 'Search' },
+          { t: 'chip', x: 180, y: 131, w: 272, h: 114, s: 'Search for', b: 'Comedy Movies' },
+          { t: 'chip', x: 468, y: 131, w: 222, h: 114, s: 'Search for', b: 'Kid Movies' },
+          { t: 's', y: 285, s: 'Your Subscriptions' },
+          { t: 'card', y: 315, h: 155, ico: 'ico-plus', ix: 40, iy: 11, iw: 172, ih: 140, tx: 277, sx: 340,
+            title: 'See all your subscriptions in one place',
+            sub: 'Press OK to add ones you already have' },
+          { t: 's', y: 510, s: 'Trending on Other Streaming Services' },
+          { t: 'img', src: 'st-a1', x: 0, y: 540, w: 205, h: 153 },
+          { t: 'img', src: 'st-a2', x: 220, y: 540, w: 273, h: 153 },
+          { t: 'img', src: 'st-a3', x: 508, y: 540, w: 182, h: 153 }
+        ],
+
+        settings: [ { t: 'list', items: ['Network', 'Remotes &amp; devices', 'Theme', 'Display type',
+          'TV inputs', 'Accessibility', 'Kid &amp; Teen Mode', 'Audio', 'Backdrops', 'Guest Mode',
+          'Home screen', 'Payment method'] } ]
+      };
+
+      var INPUTS = [
+        { label: 'HDMI 1', sub: 'Blu-ray player' },
+        { label: 'HDMI 2', sub: 'Game console' },
+        { label: 'HDMI 3', sub: 'Nothing connected' },
+        { label: 'AV', sub: 'Composite' }
+      ];
+
+      var OPTIONS = [
+        { label: 'Move channel', hint: '' },
+        { label: 'Remove channel', hint: '' },
+        { label: 'Change theme', hint: 'Daydream' },
+        { label: 'Screen mirroring', hint: 'Prompt' },
+        { label: 'Settings', hint: '' }
+      ];
+
+      var state = { screen: 'home', zone: 'nav', nav: 18, row: 0, r: 0, c: 0, ghost: false, inputIdx: 0, optIdx: 0, keyIdx: 0, query: '' };
+
+      /* ---------------- geometry ---------------- */
+
+      function navItem() { return NAV[state.nav % NAV.length]; }
+
+      function gridH(row) { return row.nRows * row.tileH + (row.nRows - 1) * row.rowGap; }
+
+      function tileBox(row, t) {
+        var x = 0, i;
+        for (i = 0; i < t.col; i++) x += row.cols[i] + row.colGap;
+        return {
+          x: x,
+          y: t.row * (row.tileH + row.rowGap),
+          w: row.cols[t.col],
+          h: t.tall ? gridH(row) : row.tileH
+        };
+      }
+
+      /* which tile sits in visual row r, column c (the tall tile spans all) */
+      function cellAt(row, r, c) {
+        var i, t;
+        for (i = 0; i < row.tiles.length; i++) {
+          t = row.tiles[i];
+          if (t.col !== c) continue;
+          if (t.tall || t.row === r) return i;
+        }
+        return -1;
+      }
+
+      function focusedTile() {
+        var row = ROWS[state.row], i = cellAt(row, state.r, state.c);
+        return i < 0 ? null : row.tiles[i];
+      }
+
+      /* vertical position of every row, given which row shows programme info */
+      function layout() {
+        var tops = [], y = GRID_TOP, i, ft = state.zone === 'content' ? focusedTile() : null;
+        for (i = 0; i < ROWS.length; i++) {
+          tops.push(y);
+          y += gridH(ROWS[i]) + ROW_GAP;
+          if (ft && ft.meta && i === state.row) y += META_H;
+        }
+        tops.push(y);   /* the looped copy of row 0 */
+        return tops;
+      }
+
+      /* ---------------- build ---------------- */
+
+      (function () {
+        var html = '', i, c, n, m;
+        for (i = 0; i < NAV.length * NAV_COPIES; i++) {
+          n = NAV[i % NAV.length];
+          m = 'var(--' + n.icon + ')';
+          html += '<div class="navitem" data-nav="' + i + '" style="top:' + navY(i) + 'px">' +
+            '<span class="ic" style="-webkit-mask-image:' + m + ';mask-image:' + m + '"></span>' +
+            '<span class="tx">' + n.label + '</span></div>';
+        }
+        for (c = 0; c < NAV_COPIES; c++) {
+          html += '<div class="navseam" style="top:' +
+            (c * NAV_H + (NAV.length - 1) * NAV_STEP + NAV_STEP + NAV_SEAM) + 'px"></div>';
+        }
+        $('sidebar').innerHTML = '<div class="navstrip" id="navstrip">' + html + '</div>';
+      })();
+
+      function rowHTML(row, ri, ghost) {
+        var h = gridH(row);
+        var tiles = row.tiles.map(function (t, ti) {
+          var b = tileBox(row, t);
+          return '<div class="tile" data-t="' + ri + '.' + ti + '"' +
+            ' style="left:' + b.x + 'px;top:' + b.y + 'px;width:' + b.w + 'px;height:' + b.h + 'px">' +
+            '<img src="img/' + t.img + '.png" alt="" draggable="false">' +
+            (t.meta ? '<span class="play"></span>' : '') + '</div>';
+        }).join('');
+        return '<div class="row" data-row="' + (ghost ? 'g' : ri) + '">' +
+          '<div class="rowlabel"></div>' +
+          '<div class="grid" style="height:' + h + 'px">' + tiles + '</div>' +
+          '<div class="metabox" style="top:' + (h + 17) + 'px"><span class="t"></span><span class="s"></span></div>' +
+          '</div>';
+      }
+
+      $('content').innerHTML = ROWS.map(function (r, i) { return rowHTML(r, i, false); }).join('') +
+        rowHTML(ROWS[0], 0, true);
+      $('chrome').innerHTML =
+        '<div class="fxlabel" id="fxlabel"></div>' +
+        '<div class="counter" id="counter"></div>' +
+        '<div class="ring" id="ring"></div>';
+
+      $('inputGrid').innerHTML = INPUTS.map(function (n, i) {
+        return '<div class="inputcard" data-input="' + i + '">' + n.label + '<small>' + n.sub + '</small></div>';
+      }).join('');
+
+      $('optList').innerHTML = OPTIONS.map(function (o, i) {
+        return '<div class="opt" data-opt="' + i + '">' + o.label + '<b>' + o.hint + '</b></div>';
+      }).join('');
+
+      var KEYCHARS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'.split('');
+      KEYCHARS.push('SPACE', 'DELETE');
+      $('keys').innerHTML = KEYCHARS.map(function (c, i) {
+        return '<div class="key' + (c.length > 1 ? ' wide' : '') + '" data-key-i="' + i + '">' + c + '</div>';
+      }).join('');
+
+
+      /* ---------------- build the panes ---------------- */
+
+      (function () {
+        var KEYROWS = ['abcdef', 'ghijkl', 'mnopqr', 'stuvwx', 'yz0123', '456789', '⌫␣⌦'];
+        var html = '';
+        Object.keys(PANES).forEach(function (id) {
+          var body = '', head = '';
+          PANES[id].forEach(function (e) {
+            if (e.t === 'h') { head = '<div class="phead">' + e.s + '</div>'; return; }
+            if (e.t === 's') {
+              body += '<div class="psub" style="left:' + ((e.x || 0) + 1) + 'px;top:' + e.y + 'px">' + e.s + '</div>';
+            } else if (e.t === 'img') {
+              body += '<div class="ptile" style="left:' + e.x + 'px;top:' + e.y + 'px;width:' + e.w +
+                'px;height:' + e.h + 'px"><img src="img/pane/' + e.src + '.png" alt="" draggable="false"></div>';
+            } else if (e.t === 'skel') {
+              for (var i = 0; i < e.n; i++)
+                body += '<div class="pskel" style="left:' + (i * e.step) + 'px;top:' + e.y +
+                  'px;width:' + e.w + 'px;height:' + e.h + 'px"></div>';
+            } else if (e.t === 'card') {
+              body += '<div class="pcard" style="top:' + e.y + 'px;height:' + e.h + 'px">' +
+                '<span class="pc-ico" style="left:' + e.ix + 'px;top:' + e.iy + 'px;width:' + e.iw +
+                'px;height:' + e.ih + 'px;-webkit-mask-image:var(--' + e.ico + ');mask-image:var(--' + e.ico + ')"></span>' +
+                '<span class="pc-t" style="left:' + e.tx + 'px">' + e.title +
+                '</span><span class="pc-s" style="left:' + e.sx + 'px">' + e.sub + '</span></div>';
+            } else if (e.t === 'sbox') {
+              body += '<div class="psbox" style="left:' + e.x + 'px;top:' + e.y + 'px;width:' + e.w +
+                'px;height:' + e.h + 'px">' + e.s + '</div>';
+            } else if (e.t === 'box') {
+              body += '<div class="pbox" style="left:' + e.x + 'px;top:' + e.y + 'px;width:' + e.w +
+                'px;height:' + e.h + 'px"><span>' + e.s + '</span></div>';
+            } else if (e.t === 'chip') {
+              body += '<div class="pchip' + (e.centre ? ' centre' : '') + '" style="left:' + e.x + 'px;top:' + e.y +
+                'px;width:' + e.w + 'px;height:' + e.h + 'px">' +
+                (e.ico ? '<span class="chip-ico" style="-webkit-mask-image:var(--' + e.ico +
+                  ');mask-image:var(--' + e.ico + ')"></span>' : e.s) + '<b>' + e.b + '</b></div>';
+            } else if (e.t === 'list') {
+              body += '<div class="plist">' + e.items.map(function (n) { return '<div>' + n + '</div>'; }).join('') + '</div>';
+            } else if (e.t === 'keys') {
+              KEYROWS.forEach(function (row, r) {
+                row.split('').forEach(function (ch, c) {
+                  body += '<div class="pkey" style="left:' + (e.x + Math.round(c * 43.6)) + 'px;top:' +
+                    (e.y + r * 40) + 'px">' + ch + '</div>';
+                });
+              });
+            }
+          });
+          html += '<div class="pane" data-pane="' + id + '" data-stage="2">' + head +
+            '<div class="pbody">' + body + '</div></div>';
+        });
+        $('panes').innerHTML = html;
+      })();
+
+      var paneT1 = null, paneT2 = null, paneSeq = 0, paneShown = null;
+
+      /* Swap the preview pane. The old one goes at once; the new heading and
+         then its body arrive after the measured gap. */
+      function setPane(id, instant) {
+        var panes = $('panes').children, i;
+        if (id === paneShown && !instant) return;
+        paneShown = id;
+        clearTimeout(paneT1); clearTimeout(paneT2);
+        var seq = ++paneSeq;
+        for (i = 0; i < panes.length; i++) {
+          var on = panes[i].dataset.pane === id;
+          panes[i].classList.toggle('on', on);
+          if (on) panes[i].dataset.stage = instant ? '2' : '0';
+        }
+        $('home').classList.toggle('offhome', id !== 'home');
+        if (instant) return;
+        paneT1 = setTimeout(function () {
+          if (seq !== paneSeq) return;
+          var el = $('panes').querySelector('.pane.on');
+          if (el) el.dataset.stage = '1';
+          paneT2 = setTimeout(function () {
+            if (seq !== paneSeq) return;
+            var e2 = $('panes').querySelector('.pane.on');
+            if (e2) e2.dataset.stage = '2';
+          }, PANE_BODY);
+        }, PANE_BLANK);
+      }
+
+      var rowEls = $('content').querySelectorAll('.row');
+
+      /* A heading or info block whose text changes clears, waits, then fades
+         back in; measured at ~50ms out, back at full by ~300ms. */
+      function swapText(el, html, immediate) {
+        if (el.dataset.cur === html) return;
+        el.dataset.cur = html;
+        clearTimeout(el.swapTimer);
+        if (immediate) { el.innerHTML = html; el.style.opacity = html ? '1' : '0'; return; }
+        el.style.opacity = '0';
+        el.swapTimer = setTimeout(function () {
+          el.innerHTML = html;
+          el.style.opacity = html ? '1' : '0';
+        }, 230);
+      }
+
+      /* ---------------- render ---------------- */
+
+      var SCREENS = ['home', 'launch', 'app', 'inputs', 'search', 'saver'];
+
+      function show(name) {
+        SCREENS.forEach(function (s) { $(s).classList.toggle('on', s === name); });
+        state.screen = name;
+        if (name !== 'home') $('options').classList.remove('on');
+        render();
+      }
+
+      function render(nojump, immediate, navjump) {
+        stage.dataset.zone = state.zone;
+
+        var items = $('navstrip').querySelectorAll('.navitem'), i;
+        for (i = 0; i < items.length; i++) items[i].classList.toggle('sel', i === state.nav);
+        var strip = $('navstrip');
+        strip.classList.toggle('nojump', !!navjump);
+        strip.style.transform = 'translateY(' + (-navY(state.nav)) + 'px)';
+        $('crumbName').textContent = navItem().label;
+
+        /* the pane follows the highlight; no OK required */
+        var wantPane = state.zone === 'content' ? 'home' : navItem().id;
+        setPane(wantPane, !!immediate);
+
+        var inContent = state.zone === 'content';
+        var ft = inContent ? focusedTile() : null;
+        var tops = layout();
+
+        for (i = 0; i < rowEls.length; i++) {
+          var ghost = i === ROWS.length;
+          var row = ROWS[ghost ? 0 : i];
+          var el = rowEls[i];
+          el.style.top = tops[i] + 'px';
+          var isFx = inContent && !state.ghost && i === state.row;
+          var isGhostFx = inContent && state.ghost && ghost;
+          el.classList.toggle('fxrow', isFx || isGhostFx);
+
+          /* Each row carries its own heading; it scrolls with the row and is
+             cut off at y=160 like everything else. The focused row's heading
+             is drawn by #fxlabel instead, above that line. */
+          el.querySelector('.rowlabel').innerHTML = row.label;
+          if (isFx && row.mode === 'tile' && ft) {
+            counter.innerHTML = (row.tiles.indexOf(ft) + 1) + ' of ' + row.tiles.length;
+          }
+
+          var mb = el.querySelector('.metabox');
+          var wantMeta = isFx && ft && ft.meta;
+          mb.classList.toggle('on', !!wantMeta);
+          swapText(mb, wantMeta ? '<span class="t">' + ft.title + '</span><span class="s">' + ft.meta + '</span>' : '', !!immediate);
+        }
+
+        var tiles = $('content').querySelectorAll('.tile');
+        var key = inContent ? state.row + '.' + ROWS[state.row].tiles.indexOf(ft) : '';
+        for (i = 0; i < tiles.length; i++) {
+          var inGhost = tiles[i].closest('.row').dataset.row === 'g';
+          tiles[i].classList.toggle('fx', !!ft && tiles[i].dataset.t === key && (state.ghost ? inGhost : !inGhost));
+        }
+
+        /* Heading and counter live above the clip line and do not scroll.
+           The heading clears on a move and fades back in ~230ms later. */
+        var fRow = ROWS[state.row];
+        swapText($('fxlabel'),
+          !inContent ? '' : (fRow.mode === 'tile' && ft ? ft.title : fRow.label),
+          !!immediate);
+
+        var cEl = $('counter');
+        var wantCount = inContent && fRow.mode === 'tile' && ft;
+        cEl.classList.toggle('on', !!wantCount);
+        if (wantCount) cEl.innerHTML = (fRow.tiles.indexOf(ft) + 1) + ' of ' + fRow.tiles.length;
+
+        /* Park the focused row at y=160. Grid rows ("tile" mode) park the
+           focused sub-row; content rows park the whole block, so the second
+           pick stays put with the first still above it. */
+        var shift = 0;
+        if (inContent) {
+          var base = state.ghost ? tops[ROWS.length] : tops[state.row];
+          var rr = ROWS[state.row];
+          shift = base - GRID_TOP;
+          if (rr.mode === 'tile') shift += state.r * (rr.tileH + rr.rowGap);
+        }
+        $('content').classList.toggle('nojump', !!nojump || !!immediate);
+        $('content').style.transform = shift ? 'translateY(' + (-shift) + 'px)' : '';
+
+        /* The ring sits above the clip line, so it is placed in screen
+           coordinates: the row's position less however far the page scrolled. */
+        var ring = $('ring');
+        ring.classList.toggle('on', !!ft);
+        ring.classList.toggle('nojump', !!nojump || !!immediate);
+        if (ft) {
+          var bx = tileBox(fRow, ft);
+          var rt = state.ghost ? tops[ROWS.length] : tops[state.row];
+          ring.style.left = (bx.x - 10) + 'px';
+          ring.style.top = (rt + bx.y - shift - 10) + 'px';
+          ring.style.width = (bx.w + 20) + 'px';
+          ring.style.height = (bx.h + 20) + 'px';
+        }
+
+        var cards = document.querySelectorAll('.inputcard');
+        for (i = 0; i < cards.length; i++) cards[i].classList.toggle('fx', i === state.inputIdx);
+        var opts = document.querySelectorAll('.opt');
+        for (i = 0; i < opts.length; i++) opts[i].classList.toggle('fx', i === state.optIdx);
+        var keys = document.querySelectorAll('.key');
+        for (i = 0; i < keys.length; i++) keys[i].classList.toggle('fx', i === state.keyIdx);
+
+        var q = $('query');
+        if (state.query) { q.textContent = state.query; q.classList.remove('ph'); }
+        else { q.textContent = 'Search for movies, TV shows, actors'; q.classList.add('ph'); }
+      }
+
+      /* ---------------- actions ---------------- */
+
+      var launchTimer = null;
+
+      function openApp(title, note) {
+        clearTimeout(launchTimer);
+        $('launchMark').innerHTML = title;
+        show('launch');
+        launchTimer = setTimeout(function () {
+          $('appName').innerHTML = title;
+          $('appBig').innerHTML = title;
+          $('appSub').innerHTML = note ||
+            'This channel is part of the simulation. Press <kbd>Esc</kbd> to return to the Roku home screen.';
+          show('app');
+        }, 1100);
+      }
+
+      function enterContent() {
+        state.zone = 'content';
+        state.row = 0; state.r = 0; state.c = 0; state.ghost = false;
+        render(true, true);          /* the ring appears, it does not fly in */
+      }
+
+      function activateNav() {
+        var n = navItem();
+        if (n.id === 'home') enterContent();
+        else if (n.id === 'inputs') { state.inputIdx = 0; show('inputs'); }
+        else if (n.id === 'search') show('search');
+        /* the other rows already show their pane, so OK has nothing to open */
+      }
+
+      function ok() {
+        if ($('options').classList.contains('on')) { $('options').classList.remove('on'); return; }
+        settleGhost();
+        if (state.screen === 'home') {
+          if (state.zone === 'nav') activateNav();
+          else { var t = focusedTile(); if (t) openApp(t.title); }
+        } else if (state.screen === 'inputs') {
+          var inp = INPUTS[state.inputIdx];
+          openApp(inp.label, inp.sub === 'Nothing connected'
+            ? 'No signal detected on ' + inp.label + '. Press <kbd>Esc</kbd> to choose another input.'
+            : 'Now showing <b>' + inp.sub + '</b> on ' + inp.label + '. Press <kbd>Esc</kbd> to return.');
+        } else if (state.screen === 'search') typeKey();
+      }
+
+      function typeKey() {
+        var c = KEYCHARS[state.keyIdx];
+        if (c === 'SPACE') state.query += ' ';
+        else if (c === 'DELETE') state.query = state.query.slice(0, -1);
+        else state.query += c;
+        updateResults();
+        render();
+      }
+
+      function updateResults() {
+        var q = state.query.trim().toLowerCase();
+        if (!q) { $('results').textContent = 'Start typing to see results.'; return; }
+        var seen = {}, hits = [];
+        ROWS.forEach(function (r) {
+          r.tiles.forEach(function (t) {
+            var plain = t.title.replace(/&amp;/g, '&');
+            if (plain.toLowerCase().indexOf(q) > -1 && !seen[plain]) { seen[plain] = 1; hits.push(plain); }
+          });
+        });
+        $('results').innerHTML = hits.length
+          ? 'Results: ' + hits.map(function (h) { return '<b style="color:#fff;font-weight:500">' + h + '</b>'; }).join(' &nbsp;&#9679;&nbsp; ')
+          : 'No results for &ldquo;' + state.query + '&rdquo;.';
+      }
+
+      function back() {
+        if ($('options').classList.contains('on')) { $('options').classList.remove('on'); return; }
+        if (state.screen !== 'home') { clearTimeout(launchTimer); show('home'); return; }
+        if (state.zone === 'content') { state.zone = 'nav'; state.ghost = false; render(true, true); }
+      }
+
+      function goHome() {
+        clearTimeout(launchTimer);
+        $('options').classList.remove('on');
+        state.zone = 'nav'; state.nav = NAV.length * 2; state.row = 0; state.r = 0; state.c = 0; state.ghost = false;
+        show('home');
+      }
+
+      function toggleOptions() {
+        var o = $('options');
+        if (o.classList.contains('on')) { o.classList.remove('on'); return; }
+        state.optIdx = 0;
+        var ft = state.zone === 'content' ? focusedTile() : null;
+        $('optCtx').innerHTML = state.screen === 'home'
+          ? (ft ? ft.title : 'Home screen')
+          : navItem().label;
+        o.classList.add('on');
+        render();
+      }
+
+      /* ---------------- movement ---------------- */
+
+      var ghostTimer = null, navTimer = null, navSeq = 0, ghostSeq = 0;
+
+      /* Map the index back onto the middle copy. The copies are identical, so
+         doing this at rest moves nothing on screen. */
+      function navRebase() {
+        var mid = NAV.length * 2 + ((state.nav % NAV.length) + NAV.length) % NAV.length;
+        if (mid === state.nav) return false;
+        state.nav = mid;
+        return true;
+      }
+
+      /* The looped copy of the first row is only a stand-in; drop back onto
+         the real one before doing anything else with it. */
+      function settleGhost() {
+        if (!state.ghost) return;
+        clearTimeout(ghostTimer);
+        state.ghost = false;
+        render(true);
+      }
+
+      function gotoRow(ri, fromBottom) {
+        var row = ROWS[ri];
+        state.row = ri;
+        state.r = fromBottom ? row.nRows - 1 : 0;
+        state.c = Math.min(state.c, row.cols.length - 1);
+        if (cellAt(row, state.r, state.c) < 0) state.c = 0;
+      }
+
+      function moveContent(dir) {
+        if (state.ghost && dir !== 'down') settleGhost();
+        var row = ROWS[state.row], i;
+        if (dir === 'left' || dir === 'right') {
+          var step = dir === 'left' ? -1 : 1;
+          var cur = cellAt(row, state.r, state.c), c = state.c + step;
+          while (c >= 0 && c < row.cols.length) {
+            var t = cellAt(row, state.r, c);
+            if (t >= 0 && t !== cur) { state.c = c; render(); return; }
+            c += step;
+          }
+          if (dir === 'left') { state.zone = 'nav'; state.ghost = false; render(true, true); }
+          return;
+        }
+
+        if (state.ghost) { settleGhost(); row = ROWS[state.row]; }
+
+        if (dir === 'down') {
+          if (state.r < row.nRows - 1) { state.r++; render(); return; }
+          if (state.row < ROWS.length - 1) { gotoRow(state.row + 1, false); render(); return; }
+          /* off the end: scroll onto the looped copy of the first row, then
+             silently rebase onto the real one (identical on screen) */
+          state.ghost = true;
+          gotoRow(0, false);
+          render();
+          clearTimeout(ghostTimer);
+          var gseq = ++ghostSeq;
+          ghostTimer = setTimeout(function () {
+            if (gseq === ghostSeq) settleGhost();
+          }, 320);
+          return;
+        }
+
+        if (state.r > 0) { state.r--; render(); return; }
+        if (state.row > 0) { gotoRow(state.row - 1, true); render(); return; }
+        gotoRow(ROWS.length - 1, true);          /* wrap to the bottom */
+        render(true);
+      }
+
+      function move(dir) {
+        if ($('options').classList.contains('on')) {
+          if (dir === 'up') state.optIdx = Math.max(0, state.optIdx - 1);
+          if (dir === 'down') state.optIdx = Math.min(OPTIONS.length - 1, state.optIdx + 1);
+          render();
+          return;
+        }
+
+        if (state.screen === 'home') {
+          if (state.zone === 'nav') {
+            if (dir === 'up' || dir === 'down') {
+              state.nav += dir === 'down' ? 1 : -1;
+              /* Only snap back to the middle copy if we are about to run off
+                 the strip -- otherwise the index just drifts and is rebased
+                 once the key is released, where it costs nothing on screen. */
+              var span = NAV.length * NAV_COPIES;
+              if (state.nav < 0 || state.nav >= span) { navRebase(); render(true, false, true); }
+              else render();
+              clearTimeout(navTimer);
+              var seq = ++navSeq;
+              navTimer = setTimeout(function () {
+                if (seq !== navSeq) return;             /* a newer move won */
+                if (navRebase()) render(true, false, true);
+              }, 240);
+              return;
+            }
+            else if (dir === 'right' && navItem().id === 'home') { enterContent(); return; }
+            render();
+          } else moveContent(dir);
+          return;
+        }
+
+        if (state.screen === 'inputs') {
+          if (dir === 'left') state.inputIdx = Math.max(0, state.inputIdx - 1);
+          if (dir === 'right') state.inputIdx = Math.min(INPUTS.length - 1, state.inputIdx + 1);
+          render();
+          return;
+        }
+
+        if (state.screen === 'search') {
+          var i = state.keyIdx;
+          if (dir === 'left') i = Math.max(0, i - 1);
+          if (dir === 'right') i = Math.min(KEYCHARS.length - 1, i + 1);
+          if (dir === 'up') i = Math.max(0, i - 10);
+          if (dir === 'down') i = Math.min(KEYCHARS.length - 1, i + 10);
+          state.keyIdx = i;
+          render();
+        }
+      }
+
+      /* ---------------- input ---------------- */
+
+      function press(key) {
+        wake();
+        switch (key) {
+          case 'up': case 'down': case 'left': case 'right': move(key); break;
+          case 'ok': ok(); break;
+          case 'back': back(); break;
+          case 'home': goHome(); break;
+          case 'options': toggleOptions(); break;
+          case 'full': toggleFullscreen(); break;
+        }
+      }
+
+      var KEYMAP = {
+        ArrowUp: 'up', ArrowDown: 'down', ArrowLeft: 'left', ArrowRight: 'right',
+        Enter: 'ok', ' ': 'ok', Backspace: 'back', Escape: 'back',
+        h: 'home', H: 'home', '*': 'options', f: 'full', F: 'full'
+      };
+
+      window.addEventListener('keydown', function (e) {
+        var k = KEYMAP[e.key];
+        if (!k) { wake(); return; }
+        e.preventDefault();
+        press(k);
+      });
+
+      stage.addEventListener('click', function (e) {
+        wake();
+        var navEl = e.target.closest('[data-nav]');
+        if (navEl) { state.nav = +navEl.dataset.nav; state.zone = 'nav'; render(); activateNav(); return; }
+
+        var tileEl = e.target.closest('[data-t]');
+        if (tileEl) {
+          var p = tileEl.dataset.t.split('.'), ri = +p[0], ti = +p[1];
+          var row = ROWS[ri], t = row.tiles[ti];
+          var same = state.zone === 'content' && focusedTile() === t;
+          state.zone = 'content'; state.ghost = false;
+          state.row = ri; state.r = t.row; state.c = t.col;
+          render();
+          if (same) openApp(t.title);
+          return;
+        }
+
+        var inpEl = e.target.closest('[data-input]');
+        if (inpEl) { state.inputIdx = +inpEl.dataset.input; render(); ok(); return; }
+        var keyEl = e.target.closest('[data-key-i]');
+        if (keyEl) { state.keyIdx = +keyEl.dataset.keyI; typeKey(); return; }
+        var optEl = e.target.closest('[data-opt]');
+        if (optEl) { state.optIdx = +optEl.dataset.opt; render(); ok(); }
+      });
+
+      /* ---------------- clock ---------------- */
+
+      function tickClock() {
+        var d = new Date(), h = d.getHours(), ap = h >= 12 ? 'pm' : 'am';
+        h = h % 12 || 12;
+        $('clock').textContent = h + ':' + String(d.getMinutes()).padStart(2, '0') + ' ' + ap;
+      }
+      tickClock();
+      setInterval(tickClock, 15000);
+
+      /* ---------------- screensaver ---------------- */
+
+      var idleTimer = null, raf = null, bx = 120, by = 90, vx = 1.6, vy = 1.2, beforeSaver = null;
+      var HUES = ['#662d91', '#2d6b91', '#91452d', '#2d914f', '#912d6b'];
+
+      function animateSaver() {
+        var el = $('bounce'), w = el.offsetWidth, h = el.offsetHeight;
+        bx += vx; by += vy;
+        if (bx <= 0) { bx = 0; vx = -vx; recolor(el); }
+        if (bx + w >= 1280) { bx = 1280 - w; vx = -vx; recolor(el); }
+        if (by <= 0) { by = 0; vy = -vy; recolor(el); }
+        if (by + h >= 720) { by = 720 - h; vy = -vy; recolor(el); }
+        el.style.transform = 'translate(' + bx + 'px,' + by + 'px)';
+        raf = requestAnimationFrame(animateSaver);
+      }
+
+      function recolor(el) { el.style.background = HUES[Math.floor(Math.random() * HUES.length)]; }
+
+      function sleep() {
+        if (state.screen === 'saver') return;
+        beforeSaver = state.screen;
+        show('saver');
+        raf = requestAnimationFrame(animateSaver);
+      }
+
+      function wake() {
+        clearTimeout(idleTimer);
+        idleTimer = setTimeout(sleep, 60000);
+        if (state.screen === 'saver') { cancelAnimationFrame(raf); show(beforeSaver || 'home'); }
+      }
+
+      stage.addEventListener('mousemove', wake);
+
+      /* ---------------- fullscreen + fit ---------------- */
+
+      function toggleFullscreen() {
+        if (document.fullscreenElement) document.exitFullscreen();
+        else if (document.documentElement.requestFullscreen) document.documentElement.requestFullscreen();
+      }
+
+      function fit() {
+        var w = window.innerWidth, h = window.innerHeight;
+        var s = Math.min(w / 1280, h / 720);
+        var tx = Math.round((w - 1280 * s) / 2), ty = Math.round((h - 720 * s) / 2);
+        stage.style.transform = 'translate(' + tx + 'px,' + ty + 'px)' + (s === 1 ? '' : ' scale(' + s + ')');
+      }
+
+      window.addEventListener('resize', fit);
+      fit();
+
+      /* deep links for screenshots: #content, #content=row.r.c, #search, #inputs */
+      var hash = location.hash.slice(1);
+      if (hash.indexOf('content') === 0) {
+        state.zone = 'content';
+        var at = hash.split('=')[1];
+        if (at) {
+          var n = at.split('.');
+          state.row = +n[0] || 0; state.r = +n[1] || 0; state.c = +n[2] || 0;
+        }
+      } else if (hash === 'search' || hash === 'inputs') {
+        NAV.forEach(function (n, i) { if (n.id === hash) state.nav = NAV.length * 2 + i; });
+        show(hash);
+      }
+
+      render(true, true);
+      wake();
+      stage.focus();
+    })();
+  </script>
+</body>
+
+</html>

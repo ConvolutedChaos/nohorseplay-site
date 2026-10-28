@@ -1,160 +1,168 @@
 <!doctype html>
 <html lang="en">
+
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="theme-color" content="#0b1518">
-<meta name="mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="Speedo">
-<meta name="description" content="Minimal speedometer with a trip odometer. Works offline.">
-<title>Speedo</title>
-<link rel="manifest" href="manifest.json">
-<link rel="icon" href="icons/icon.svg" type="image/svg+xml">
-<link rel="icon" href="icons/favicon-32.png" sizes="32x32" type="image/png">
-<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
-<link rel="preload" href="fonts/b612-700.woff2" as="font" type="font/woff2" crossorigin>
-<link rel="stylesheet" href="style.css">
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#0b1518">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Speedo">
+  <meta name="description" content="Minimal speedometer with a trip odometer. Works offline.">
+  <title>Speedo</title>
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" href="icons/icon.svg" type="image/svg+xml">
+  <link rel="icon" href="icons/favicon-32.png" sizes="32x32" type="image/png">
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+  <link rel="preload" href="fonts/b612-700.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="stylesheet" href="style.css">
 </head>
+
 <body data-theme="phosphor" data-view="gauge">
 
-<main id="dash" class="dash">
-  <header class="bar">
-    <div class="status" id="status" data-state="idle" role="status">
-      <span class="dot" aria-hidden="true"></span><span id="statusText">Starting</span>
-    </div>
-    <button class="icon-btn" id="openSettings" type="button" aria-label="Settings">
-      <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" d="M10.3 2.8h3.4l.5 2.4 1.6.9 2.3-.8 1.7 2.9-1.8 1.6v1.9l1.8 1.6-1.7 2.9-2.3-.8-1.6.9-.5 2.4h-3.4l-.5-2.4-1.6-.9-2.3.8-1.7-2.9 1.8-1.6v-1.9L4.2 8.2l1.7-2.9 2.3.8 1.6-.9z"/><circle cx="12" cy="12" r="3" fill="none" stroke="currentColor" stroke-width="1.6"/></svg>
-    </button>
-  </header>
-
-  <section class="speedo" id="speedo" aria-label="Speed">
-    <svg class="gauge" id="gauge" viewBox="-100 -100 200 200" aria-hidden="true"></svg>
-    <div class="readout" id="readout">
-      <div class="num" id="num">0</div>
-      <div class="led" id="led" aria-hidden="true"></div>
-      <div class="unit" id="unit">mph</div>
-    </div>
-  </section>
-
-  <section class="trip" id="trip" aria-label="Trip odometer">
-    <span class="trip-label">Trip</span>
-    <div class="odo wheels" id="odo"></div>
-    <span class="trip-unit" id="tripUnit">mi</span>
-  </section>
-</main>
-
-<div class="start" id="start" hidden>
-  <button class="start-btn" id="startBtn" type="button">Start</button>
-  <p>Speedo needs motion and location access to measure speed.</p>
-</div>
-
-<dialog class="sheet" id="settings" aria-labelledby="settingsTitle">
-  <form method="dialog" class="sheet-body">
-    <h2 id="settingsTitle">Settings</h2>
-
-    <div class="field">
-      <span class="field-label" id="lblView">Speed display</span>
-      <div class="seg" data-key="view" role="group" aria-labelledby="lblView">
-        <button type="button" data-v="number">Number</button>
-        <button type="button" data-v="gauge">Gauge</button>
-        <button type="button" data-v="led">LED</button>
+  <main id="dash" class="dash">
+    <header class="bar">
+      <div class="status" id="status" data-state="idle" role="status">
+        <span class="dot" aria-hidden="true"></span><span id="statusText">Starting</span>
       </div>
-      <p class="hint">Tap the speed to cycle through these.</p>
-    </div>
+      <button class="icon-btn" id="openSettings" type="button" aria-label="Settings">
+        <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true">
+          <path fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"
+            d="M10.3 2.8h3.4l.5 2.4 1.6.9 2.3-.8 1.7 2.9-1.8 1.6v1.9l1.8 1.6-1.7 2.9-2.3-.8-1.6.9-.5 2.4h-3.4l-.5-2.4-1.6-.9-2.3.8-1.7-2.9 1.8-1.6v-1.9L4.2 8.2l1.7-2.9 2.3.8 1.6-.9z" />
+          <circle cx="12" cy="12" r="3" fill="none" stroke="currentColor" stroke-width="1.6" />
+        </svg>
+      </button>
+    </header>
 
-    <div class="field">
-      <span class="field-label" id="lblUnits">Units</span>
-      <div class="seg" data-key="units" role="group" aria-labelledby="lblUnits">
-        <button type="button" data-v="mph">mph</button>
-        <button type="button" data-v="kmh">km/h</button>
-        <button type="button" data-v="ms">m/s</button>
-        <button type="button" data-v="kn">knots</button>
+    <section class="speedo" id="speedo" aria-label="Speed">
+      <svg class="gauge" id="gauge" viewBox="-100 -100 200 200" aria-hidden="true"></svg>
+      <div class="readout" id="readout">
+        <div class="num" id="num">0</div>
+        <div class="led" id="led" aria-hidden="true"></div>
+        <div class="unit" id="unit">mph</div>
       </div>
-    </div>
+    </section>
 
-    <div class="field">
-      <label class="field-label" for="gaugeMax">Gauge scale</label>
-      <select id="gaugeMax">
-        <option value="auto">Automatic for units</option>
-        <option value="30">0–30</option>
-        <option value="60">0–60</option>
-        <option value="100">0–100</option>
-        <option value="140">0–140</option>
-        <option value="180">0–180</option>
-        <option value="240">0–240</option>
-      </select>
-    </div>
+    <section class="trip" id="trip" aria-label="Trip odometer">
+      <span class="trip-label">Trip</span>
+      <div class="odo wheels" id="odo"></div>
+      <span class="trip-unit" id="tripUnit">mi</span>
+    </section>
+  </main>
 
-    <div class="field">
-      <span class="field-label" id="lblTheme">Colors</span>
-      <div class="swatches" data-key="theme" role="group" aria-labelledby="lblTheme">
-        <button type="button" data-v="phosphor" title="Phosphor"><i></i><span>Phosphor</span></button>
-        <button type="button" data-v="amber" title="Amber"><i></i><span>Amber</span></button>
-        <button type="button" data-v="lcd" title="LCD"><i></i><span>LCD</span></button>
-        <button type="button" data-v="daylight" title="Daylight"><i></i><span>Daylight</span></button>
-        <button type="button" data-v="night" title="Night (red keeps your night vision)"><i></i><span>Night</span></button>
-        <button type="button" data-v="ice" title="Ice"><i></i><span>Ice</span></button>
-      </div>
-      <div class="accent-row">
-        <label for="accent">Custom accent</label>
-        <input type="color" id="accent" value="#5ef2cf">
-        <button type="button" class="link-btn" id="clearAccent">Use theme color</button>
-      </div>
-    </div>
+  <div class="start" id="start" hidden>
+    <button class="start-btn" id="startBtn" type="button">Start</button>
+    <p>Speedo needs motion and location access to measure speed.</p>
+  </div>
 
-    <div class="field">
-      <span class="field-label" id="lblOdo">Trip odometer</span>
-      <div class="seg" data-key="odoStyle" role="group" aria-labelledby="lblOdo">
-        <button type="button" data-v="wheels">Number wheels</button>
-        <button type="button" data-v="digital">Digital</button>
-      </div>
-      <div class="pair">
-        <div>
-          <span class="sub-label" id="lblDigits">Whole digits</span>
-          <div class="seg" data-key="odoDigits" data-num role="group" aria-labelledby="lblDigits">
-            <button type="button" data-v="3">3</button>
-            <button type="button" data-v="4">4</button>
-            <button type="button" data-v="5">5</button>
-            <button type="button" data-v="6">6</button>
-          </div>
+  <dialog class="sheet" id="settings" aria-labelledby="settingsTitle">
+    <form method="dialog" class="sheet-body">
+      <h2 id="settingsTitle">Settings</h2>
+
+      <div class="field">
+        <span class="field-label" id="lblView">Speed display</span>
+        <div class="seg" data-key="view" role="group" aria-labelledby="lblView">
+          <button type="button" data-v="number">Number</button>
+          <button type="button" data-v="gauge">Gauge</button>
+          <button type="button" data-v="led">LED</button>
         </div>
-        <div>
-          <span class="sub-label" id="lblDec">Decimals</span>
-          <div class="seg" data-key="odoDecimals" data-num role="group" aria-labelledby="lblDec">
-            <button type="button" data-v="0">0</button>
-            <button type="button" data-v="1">1</button>
-            <button type="button" data-v="2">2</button>
-          </div>
+        <p class="hint">Tap the speed to cycle through these.</p>
+      </div>
+
+      <div class="field">
+        <span class="field-label" id="lblUnits">Units</span>
+        <div class="seg" data-key="units" role="group" aria-labelledby="lblUnits">
+          <button type="button" data-v="mph">mph</button>
+          <button type="button" data-v="kmh">km/h</button>
+          <button type="button" data-v="ms">m/s</button>
+          <button type="button" data-v="kn">knots</button>
         </div>
       </div>
-      <button type="button" class="wide-btn" id="resetTrip">Reset trip</button>
-      <p class="hint">Or hold the odometer for one second.</p>
-    </div>
 
-    <div class="field">
-      <span class="field-label" id="lblSource">Speed source</span>
-      <div class="seg" data-key="source" role="group" aria-labelledby="lblSource">
-        <button type="button" data-v="auto">Auto</button>
-        <button type="button" data-v="accel">Accelerometer</button>
-        <button type="button" data-v="gps">GPS</button>
+      <div class="field">
+        <label class="field-label" for="gaugeMax">Gauge scale</label>
+        <select id="gaugeMax">
+          <option value="auto">Automatic for units</option>
+          <option value="30">0–30</option>
+          <option value="60">0–60</option>
+          <option value="100">0–100</option>
+          <option value="140">0–140</option>
+          <option value="180">0–180</option>
+          <option value="240">0–240</option>
+        </select>
       </div>
-      <p class="hint" id="sourceHint"></p>
-    </div>
 
-    <div class="field toggles">
-      <label class="toggle"><span>Mirror for windshield HUD</span><input type="checkbox" data-key="mirror"></label>
-      <label class="toggle"><span>Keep screen on</span><input type="checkbox" data-key="wake"></label>
-      <label class="toggle"><span>Demo drive (fake data)</span><input type="checkbox" id="demo"></label>
-    </div>
+      <div class="field">
+        <span class="field-label" id="lblTheme">Colors</span>
+        <div class="swatches" data-key="theme" role="group" aria-labelledby="lblTheme">
+          <button type="button" data-v="phosphor" title="Phosphor"><i></i><span>Phosphor</span></button>
+          <button type="button" data-v="amber" title="Amber"><i></i><span>Amber</span></button>
+          <button type="button" data-v="lcd" title="LCD"><i></i><span>LCD</span></button>
+          <button type="button" data-v="daylight" title="Daylight"><i></i><span>Daylight</span></button>
+          <button type="button" data-v="night"
+            title="Night (red keeps your night vision)"><i></i><span>Night</span></button>
+          <button type="button" data-v="ice" title="Ice"><i></i><span>Ice</span></button>
+        </div>
+        <div class="accent-row">
+          <label for="accent">Custom accent</label>
+          <input type="color" id="accent" value="#5ef2cf">
+          <button type="button" class="link-btn" id="clearAccent">Use theme color</button>
+        </div>
+      </div>
 
-    <dl class="diag" id="diag" aria-label="Sensor details"></dl>
+      <div class="field">
+        <span class="field-label" id="lblOdo">Trip odometer</span>
+        <div class="seg" data-key="odoStyle" role="group" aria-labelledby="lblOdo">
+          <button type="button" data-v="wheels">Number wheels</button>
+          <button type="button" data-v="digital">Digital</button>
+        </div>
+        <div class="pair">
+          <div>
+            <span class="sub-label" id="lblDigits">Whole digits</span>
+            <div class="seg" data-key="odoDigits" data-num role="group" aria-labelledby="lblDigits">
+              <button type="button" data-v="3">3</button>
+              <button type="button" data-v="4">4</button>
+              <button type="button" data-v="5">5</button>
+              <button type="button" data-v="6">6</button>
+            </div>
+          </div>
+          <div>
+            <span class="sub-label" id="lblDec">Decimals</span>
+            <div class="seg" data-key="odoDecimals" data-num role="group" aria-labelledby="lblDec">
+              <button type="button" data-v="0">0</button>
+              <button type="button" data-v="1">1</button>
+              <button type="button" data-v="2">2</button>
+            </div>
+          </div>
+        </div>
+        <button type="button" class="wide-btn" id="resetTrip">Reset trip</button>
+        <p class="hint">Or hold the odometer for one second.</p>
+      </div>
 
-    <button class="done" value="done">Done</button>
-  </form>
-</dialog>
+      <div class="field">
+        <span class="field-label" id="lblSource">Speed source</span>
+        <div class="seg" data-key="source" role="group" aria-labelledby="lblSource">
+          <button type="button" data-v="auto">Auto</button>
+          <button type="button" data-v="accel">Accelerometer</button>
+          <button type="button" data-v="gps">GPS</button>
+        </div>
+        <p class="hint" id="sourceHint"></p>
+      </div>
 
-<script src="app.js" defer></script>
+      <div class="field toggles">
+        <label class="toggle"><span>Mirror for windshield HUD</span><input type="checkbox" data-key="mirror"></label>
+        <label class="toggle"><span>Keep screen on</span><input type="checkbox" data-key="wake"></label>
+        <label class="toggle"><span>Demo drive (fake data)</span><input type="checkbox" id="demo"></label>
+      </div>
+
+      <dl class="diag" id="diag" aria-label="Sensor details"></dl>
+
+      <button class="done" value="done">Done</button>
+    </form>
+  </dialog>
+
+  <script src="app.js" defer></script>
 </body>
+
 </html>
