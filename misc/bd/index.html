@@ -1,0 +1,820 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Blu-ray Disc Player</title>
+<style>
+/* ------------------------------------------------------------------
+   Sony Blu-ray Disc player home screen (XrossMediaBar)
+   Design space: 960 x 540 — identical to the player's own UI space, so
+   every asset in img/ is drawn at its native 1:1 size.
+   ------------------------------------------------------------------ */
+
+@font-face{
+  font-family:'Tiresias Screenfont';
+  src:url('fonts/tt7268m_.ttf') format('truetype');
+  font-weight:400; font-style:normal; font-display:block;
+}
+
+*{margin:0;padding:0;box-sizing:border-box}
+
+html,body{
+  height:100%; background:#000; overflow:hidden;
+  font-family:'Tiresias Screenfont',sans-serif;
+  -webkit-font-smoothing:antialiased;
+}
+
+/* 16:9 letterboxed stage ------------------------------------------- */
+#fit{
+  position:fixed; inset:0;
+  display:flex; align-items:center; justify-content:center;
+  background:#000;
+}
+#stage{
+  position:relative;
+  width:960px; height:540px;
+  transform-origin:center center;
+  /* Promote the whole interface to one composited layer so it is rasterised
+     once and then scaled, the way the player's own 960x540 output is. Without
+     this the bitmaps upscale softly while the type stays razor sharp with LCD
+     subpixel fringes - which the player, measured, does not have. */
+  will-change:transform;
+  background:#000;
+  overflow:hidden;
+  user-select:none;
+}
+
+#backdrop{
+  position:absolute; left:0; top:0; width:960px; height:540px;
+  pointer-events:none;
+}
+
+/* static bottom-right marks ---------------------------------------- */
+#bdlogo { position:absolute; left:808.5px; top:410.5px; width:80px; height:64px; }
+#bdbadge{ position:absolute; left:808.5px; top:475px;   width:80px; height:29px; }
+
+/* ------------------------------------------------------------------
+   Horizontal category bar
+   ------------------------------------------------------------------ */
+#bar{ position:absolute; left:0; top:0; width:100%; height:100%; }
+
+.cat{
+  position:absolute; left:0; top:0; width:0; height:0;
+  transition:transform var(--t) var(--e);
+}
+.cat-icon{
+  position:absolute; left:0; top:161px;
+  width:93px; height:93px; margin:-46.5px 0 0 -46.5px;
+  opacity:.25;
+  transition:transform var(--t) var(--e), opacity var(--t) var(--e);
+  transform:scale(.732);
+}
+.cat.on > .cat-icon{ opacity:1; transform:scale(1); }
+.cat.d1 > .cat-icon{ opacity:.70; }
+.cat.d2 > .cat-icon{ opacity:.55; }
+.cat.d3 > .cat-icon{ opacity:.40; }
+.cat.d4 > .cat-icon{ opacity:.23; }
+
+.cat-label{
+  position:absolute; left:0; top:206.1px;
+  font-size:17.9px; line-height:0; color:#fff; white-space:nowrap;
+  transform:translateX(-50%);
+  text-shadow:0 0 2px rgba(190,215,255,.45);
+  opacity:0;
+  transition:opacity var(--t) var(--e);
+}
+.cat.on > .cat-label{ opacity:1; }
+
+/* ------------------------------------------------------------------
+   Vertical item column (only the active category shows one)
+   ------------------------------------------------------------------ */
+.col{
+  position:absolute; left:0; top:0; width:0; height:0;
+  opacity:0; visibility:hidden;
+  transition:opacity var(--t) var(--e), visibility 0s linear var(--t);
+}
+.cat.on > .col{ opacity:1; visibility:visible; transition:opacity var(--t) var(--e), visibility 0s; }
+
+.item{
+  position:absolute; left:0; top:0; width:0; height:0;
+  transition:transform var(--t) var(--e), opacity var(--t) var(--e);
+}
+
+/* icon: drawn at native asset size, centred on the item anchor */
+.item .ic{
+  position:absolute; left:0; top:0;
+  transform:translate(-50%,-50%);
+  display:block;
+}
+/* a tile fills its category's cell; a plain icon keeps its native size */
+.item .ic.thumb{ width:var(--tw); height:62px; }
+
+/* focus frame — the player's own XmbFocus.png, 9-sliced.
+   The white rule in that asset sits 11/13 into the border region, so a
+   13px border pushed out by 11px lands the rule exactly on the box. */
+.item .fc{
+  position:absolute; left:0; top:0;
+  width:var(--cw); height:67px;
+  margin:-33.5px 0 0 calc(var(--cw) / -2);
+  border:13px solid transparent;
+  border-image:url('img/XmbFocus.png') 13 fill stretch;
+  border-image-outset:11px;
+  opacity:0;
+  transition:opacity 140ms linear;
+  pointer-events:none;
+}
+.item.sel .fc{ opacity:1; }
+
+/* the text column begins 21px past the right edge of the cell */
+.item .tx{ position:absolute; left:calc(var(--cw) / 2 + 20.3px); top:0; }
+
+.item .ti,.item .su{
+  position:absolute; left:0;
+  line-height:0; white-space:nowrap;
+  color:rgba(255,255,255,.695);
+  text-shadow:none;
+  transition:color var(--t) var(--e), opacity var(--t) var(--e);
+}
+.item .ti{ font-size:20.5px; }
+.item .su{ font-size:18.5px; }
+
+.item.sel .ti,.item.sel .su{ color:#fff; text-shadow:0 0 1.5px rgba(205,228,255,.45); }
+
+/* single-line (menu) items sit on the optical centre of the row;
+   items that carry a description sit on the upper of two lines */
+.item.one  .ti{ top:.13px; }
+.item.two  .ti{ top:-13.37px; }
+.item.two  .su{ top:12.94px; }
+
+/* a description that only appears while the row is selected */
+.su.onsel{ opacity:0; }
+.item.sel .su.onsel{ opacity:1; }
+
+/* enter-key feedback: the focus frame pulses in, as on the player */
+@keyframes press{
+  0%  { transform:scale(1);    filter:brightness(1);   }
+  40% { transform:scale(.955); filter:brightness(1.9); }
+  100%{ transform:scale(1);    filter:brightness(1);   }
+}
+.item.sel.press .fc{ animation:press 190ms ease-out; }
+
+/* ------------------------------------------------------------------
+   Edge vignetting — the player's own overlays, tiling the four borders
+   (top 0-101, sides 101-439, bottom 439-540) over the whole interface.
+   ------------------------------------------------------------------ */
+#vig{ position:absolute; inset:0; pointer-events:none; }
+#vig img{ position:absolute; display:block; }
+#vig .vt{ left:0;   top:0;    width:960px; height:101px; }
+#vig .vb{ left:0;   top:439px;width:960px; height:101px; }
+#vig .vl{ left:0;   top:101px;width:101px; height:338px; }
+#vig .vr{ left:859px;top:101px;width:101px; height:338px; }
+
+/* ------------------------------------------------------------------
+   Disc playback: a full-screen black plane carrying the picture and
+   the player's "now playing" status banner.
+   ------------------------------------------------------------------ */
+#play{
+  position:absolute; left:0; top:0; width:960px; height:540px;
+  background:#000; visibility:hidden; opacity:0;
+}
+#play.on{ visibility:visible; opacity:1; }
+
+#disc{
+  position:absolute; left:0; top:0; width:960px; height:540px;
+  object-fit:contain;              /* a 4:3 disc pillarboxes, as on the player */
+  background:#000; display:block; opacity:0;
+}
+#disc.on{ opacity:1; }
+
+/* measured from the reference capture: green play mark at 95,468 (29.5 x 17)
+   and a two-line grey label centred on x=170, baselines at 476 and 488 */
+#osd{ position:absolute; left:0; top:0; width:960px; height:540px;
+      opacity:0; transition:opacity 120ms linear; pointer-events:none; }
+#osd.on{ opacity:1; }
+#osd .tri{
+  position:absolute; left:95px; top:468px; width:29.5px; height:17px;
+  background:#00d600;
+  clip-path:polygon(0 0, 100% 50%, 0 100%);
+}
+#osd .l1,#osd .l2{
+  position:absolute; left:170px; transform:translateX(-50%);
+  font-size:15px; line-height:0; color:#b9b9b9; white-space:nowrap;
+}
+#osd .l1{ top:469.87px; }
+#osd .l2{ top:481.87px; }
+
+/* ------------------------------------------------------------------
+   Full-screen message pages (media server startup / failure).
+   Both are centred on y=271, the same optical centre the item rows use.
+   Every number below is measured from the reference capture.
+   ------------------------------------------------------------------ */
+#ovl{ position:absolute; left:0; top:0; width:960px; height:540px; visibility:hidden; }
+#ovl.on{ visibility:visible; }
+.pn{ position:absolute; left:0; top:0; width:960px; height:540px; display:none; }
+.pn.on{ display:block; }
+
+.ptx{ position:absolute; line-height:0; white-space:nowrap; font-size:20.5px; }
+.ptx.t1{ color:rgba(255,255,255,.68); }   /* page title  */
+.ptx.t2{ color:rgba(255,255,255,.51); }   /* body copy   */
+
+/* the player's own separator art, 9-sliced so the 29px taper at each
+   end keeps its size while the middle stretches. Drawn at full opacity:
+   the capture reads these hairlines ~20% dim, as it does the focus box,
+   which is the encoder rather than the player. */
+.rule{
+  position:absolute; height:18px;
+  border:0 solid transparent; border-width:0 29px;
+  border-image:url('img/Separator_H_Wide.png') 0 29 fill stretch;
+}
+.rule.thin{ border-image-source:url('img/Separator_H_Narrow.png'); }
+
+/* Close button: Focus_Hi stretched horizontally, label optically centred
+   on the box exactly as a single-line menu row is centred on its row */
+.btn{
+  position:absolute; left:385px; top:332.5px; width:190px; height:45px;
+  border:0 solid transparent; border-width:0 6px;
+  border-image:url('img/Focus_Hi.png') 0 6 fill stretch;
+  opacity:.73;           /* measured: the face reads 139,153,157, not 192,206,214 */
+}
+.btnlab{
+  position:absolute; left:480px; top:355px; transform:translateX(-50%);
+  line-height:0; font-size:20.5px; color:#152429;
+}
+
+.warn{ position:absolute; left:243px; top:198.5px; width:36px; height:36px; }
+
+/* the highlight that sweeps the separator while the server is contacted:
+   1.833s cycle, a hard ease-out across 391px then a 0.47s gap */
+#sweep{
+  position:absolute; left:284px; top:276.7px; width:22px; height:9px; margin-left:-11px;
+  background:radial-gradient(closest-side, rgba(255,255,255,.95), rgba(255,255,255,0));
+  opacity:0;
+}
+#pn-start.on #sweep{ animation:sweep 1833ms linear infinite; }
+@keyframes sweep{
+  0%    { transform:translateX(3px);   opacity:.24; }
+  5.5%  { transform:translateX(62px);  opacity:.36; }
+  10.9% { transform:translateX(152px); opacity:.56; }
+  16.4% { transform:translateX(216px); opacity:.70; }
+  21.8% { transform:translateX(264px); opacity:.80; }
+  27.3% { transform:translateX(301px); opacity:.86; }
+  34.5% { transform:translateX(346px); opacity:.99; }
+  40%   { transform:translateX(362px); opacity:1;   }
+  45.5% { transform:translateX(370px); opacity:.53; }
+  50.9% { transform:translateX(380px); opacity:.29; }
+  54.6% { transform:translateX(385px); opacity:.14; }
+  67.3% { transform:translateX(388px); opacity:.05; }
+  74.6% { transform:translateX(391px); opacity:0;   }
+  100%  { transform:translateX(391px); opacity:0;   }
+}
+
+/* ------------------------------------------------------------------
+   Hot corner - an invisible target in the bottom-left of the window
+   that reveals the disc tray. Not part of the player; it is the one
+   thing on this page with no counterpart in the real hardware.
+   ------------------------------------------------------------------ */
+#hot{
+  position:fixed; left:0; bottom:0; width:96px; height:96px;
+  z-index:10; background:transparent; border:0; padding:0;
+  cursor:default; -webkit-appearance:none; appearance:none;
+}
+#hot:focus-visible{ outline:1px solid rgba(255,255,255,.25); }
+
+#tray{
+  position:fixed; left:16px; bottom:16px; z-index:11;
+  min-width:168px; padding:5px 0;
+  background:rgba(12,14,18,.93);
+  border:1px solid rgba(255,255,255,.16);
+  border-radius:4px;
+  box-shadow:0 8px 26px rgba(0,0,0,.65);
+  font-size:13px; color:#dfe4ea;
+  opacity:0; transform:translateY(7px); pointer-events:none;
+  transition:opacity 150ms ease, transform 150ms ease;
+}
+#hot:hover ~ #tray, #hot:focus-visible ~ #tray,
+#tray:hover, #tray:focus-within, #tray.open{
+  opacity:1; transform:none; pointer-events:auto;
+}
+#tray .st{
+  padding:4px 16px 7px; font-size:11px; letter-spacing:.3px;
+  color:rgba(255,255,255,.42);
+}
+#tray button{
+  display:block; width:100%; text-align:left;
+  padding:7px 16px; background:none; border:0;
+  color:inherit; font:inherit; white-space:nowrap; cursor:pointer;
+}
+#tray button:hover{ background:rgba(255,255,255,.13); }
+#tray button:focus-visible{ background:rgba(255,255,255,.18); outline:none; }
+
+/* first-run hint ---------------------------------------------------- */
+#hint{
+  position:absolute; left:0; right:0; bottom:14px;
+  text-align:center; font-size:11px; letter-spacing:.4px;
+  color:rgba(255,255,255,.34);
+  transition:opacity 500ms linear;
+  pointer-events:none;
+}
+#hint.gone{ opacity:0; }
+</style>
+</head>
+<body>
+<div id="fit">
+  <div id="stage" style="--t:330ms; --e:cubic-bezier(.14,.78,.2,1)">
+    <div id="xmb">
+      <img id="backdrop" src="img/background.png" alt="">
+      <div id="bar"></div>
+      <div id="vig">
+        <img class="vt" src="img/XmbVignettingTop.png"    alt="">
+        <img class="vb" src="img/XmbVignettingBottom.png" alt="">
+        <img class="vl" src="img/XmbVignettingLeft.png"   alt="">
+        <img class="vr" src="img/XmbVignettingRight.png"  alt="">
+      </div>
+      <img id="bdlogo"  src="img/XmbBdLogo.png"         alt="Blu-ray Disc">
+      <img id="bdbadge" src="img/XmbBdIdentifyIcon.png" alt="BD">
+      <div id="hint">&#9664; &#9650; &#9660; &#9654; to navigate &nbsp;·&nbsp; Enter to select</div>
+    </div>
+
+    <div id="ovl">
+      <div class="pn" id="pn-start">
+        <div class="ptx t1" style="left:248px;   top:114.23px">Server Startup</div>
+        <div class="rule"   style="left:240px;   top:125px; width:482px"></div>
+        <div class="ptx t2" style="left:262.5px; top:175.73px">The server is currently starting up.</div>
+        <div class="ptx t2" style="left:262.5px; top:201.73px">Please wait.</div>
+        <div class="ptx t2" style="left:262.5px; top:227.73px">Startup may take a few minutes.</div>
+        <div class="rule thin" style="left:284px; top:270.7px; width:392px"></div>
+        <div id="sweep"></div>
+        <div class="btn"></div>
+        <div class="btnlab">Close</div>
+        <div class="rule"   style="left:240px;   top:397.5px; width:482px"></div>
+      </div>
+      <div class="pn" id="pn-fail">
+        <div class="rule"   style="left:240px; top:173.5px; width:482px"></div>
+        <img class="warn" src="img/MessageClip2.png" alt="">
+        <div class="ptx t2" style="left:280.5px; top:216.33px">Cannot start server.</div>
+        <div class="ptx t2" style="left:280px;   top:267.73px">Wait for a few moments,</div>
+        <div class="ptx t2" style="left:280px;   top:293.73px">and then select the same server again</div>
+        <div class="ptx t2" style="left:280px;   top:319.73px">or turn the media server's power off and on.</div>
+        <div class="rule"   style="left:240px; top:347.5px; width:482px"></div>
+      </div>
+    </div>
+
+    <div id="play">
+      <video id="disc" playsinline preload="auto"></video>
+      <div id="osd">
+        <div class="tri"></div>
+        <div class="l1">DVD</div>
+        <div class="l2">VIDEO</div>
+      </div>
+    </div>
+  </div>
+
+  <button id="hot" type="button" aria-label="Disc tray"></button>
+  <div id="tray" role="menu" aria-label="Disc tray">
+    <div class="st" id="tray-state">No disc</div>
+    <button type="button" id="tray-primary" role="menuitem">Insert disc</button>
+    <button type="button" id="tray-eject" role="menuitem" hidden>Eject disc</button>
+  </div>
+</div>
+
+<script>
+'use strict';
+
+/* ---------- measured geometry (960 x 540 design space) ------------- */
+const CAT_X      = 307;      // centre of the active category column
+const CAT_PITCH  = 106.1;    // horizontal spacing between categories
+const THUMB_H    = 62;       // tile height; the cell is 5px larger all round
+const SEL_Y      = 271;      // active row
+const ABOVE1_Y   = 68.5;     // first row above the active one
+const BELOW1_Y   = 377.75;   // first row below the active one
+const PITCH      = 62;       // spacing between non-active rows
+
+/* ---------- content ------------------------------------------------ */
+const IMG = 'img/', GEN = 'gen/';
+
+const MENU = [
+  { name:'Setup', icon:IMG+'XmbCategorySettingsNr.png', items:[
+      { t:'Network Update',            i:IMG+'XmbNetworkUpdate.png'   },
+      { t:'Screen Settings',           i:IMG+'XmbVideoSettings.png'   },
+      { t:'Audio Settings',            i:IMG+'XmbAudioSettings.png'   },
+      { t:'BD/DVD Viewing Settings',   i:IMG+'XmbDiscSettings.png'    },
+      { t:'Parental Control Settings', i:IMG+'XmbParentalSettings.png'},
+      { t:'Music Settings',            i:IMG+'XmbMusicSettings.png'   },
+      { t:'System Settings',           i:IMG+'XmbSystemSettings.png'  },
+      { t:'Network Settings',          i:IMG+'XmbNetworkSettings.png' },
+      { t:'Easy Network Settings',     i:IMG+'XmbEasySetup.png'       },
+      { t:'Resetting',                 i:IMG+'XmbResetting.png'       }
+    ], start:1 },
+
+  { name:'Photo', icon:IMG+'XmbCategoryPhotoNr.png', items:[
+      { t:'Plex Media Server: XPS', i:IMG+'XmbPluginMediaDLNANr.png', s:'00:22:19:06:9b:cc', keep:true, server:true }
+    ], start:0 },
+
+  { name:'Music', icon:IMG+'XmbCategoryMusicNr.png', items:[
+      { t:'Music Search',           i:IMG+'XmbMusicSearch.png',       s:'Info search from the viewing history is available.' },
+      { t:'Plex Media Server: XPS', i:IMG+'XmbPluginMediaDLNANr.png', s:'00:22:19:06:9b:cc', keep:true, server:true },
+      { t:'Slacker',                i:GEN+'slacker.png',      thumb:true, s:'Your music without the work' },
+      { t:'Pandora Internet Radio', i:GEN+'pandora.png',      thumb:true, s:"Discover music you'll love!" },
+      { t:'Lollapalooza Radio',     i:GEN+'lollapalooza.png', thumb:true, s:'' }
+    ], start:1 },
+
+  /* the Fandango tile is 16:11.6, so every Video row gets the wider cell */
+  { name:'Video', icon:IMG+'XmbCategoryVideoNr.png', tile:83, items:[
+      { t:'Erase BD Data',          i:IMG+'XmbFolderVideo.png',       s:'USB device (rear)' },
+      { t:'Important Notice!',      i:GEN+'importantnotice.png', thumb:true, s:'' },
+      { t:'Video Search',           i:IMG+'XmbVideoSearch.png',       s:'Info search from the viewing history is available.' },
+      { t:'Plex Media Server: XPS', i:IMG+'XmbPluginMediaDLNANr.png', s:'00:22:19:06:9b:cc', keep:true, server:true },
+      { t:'Fandango at Home',       i:GEN+'fandango.png', thumb:true,  s:'70,000 movies & TV shows' }
+    ], start:4 },
+
+  { name:'Network', icon:IMG+'XmbCategoryNetworkNr.png', items:[
+      { t:'Internet Browser',           i:IMG+'mtk_XmbHtmlBrowser.png', s:'' },
+      { t:'Unregister Device',          i:GEN+'unregister.png', thumb:true, s:'' },
+      { t:'Activate Enhanced Features', i:GEN+'activate.png',   thumb:true, s:'' }
+    ], start:1 }
+];
+
+/* ---------- the disc -------------------------------------------------
+   Timings are measured from the reference capture, whose clock starts
+   the instant the tray closed:
+      0.00 - 9.10   the home screen stays up while the disc is read
+      9.10 -12.50   black
+     12.50 -17.50   the green "DVD VIDEO" status banner
+     17.50 -20.10   black
+     20.10          picture
+   --------------------------------------------------------------------*/
+const DISC_CAT  = 3;                                  // Video
+const DISC_ITEM = { t:'DVD VIDEO', i:IMG+'XmbDiscDvd.png', one:true };
+const DISC_SRC  = 'video/brian-loves-chocolate.mp4';  // swap for any disc
+
+/* In the capture the disc row sits directly above "Fandango at Home",
+   with Plex above it - so it is not appended, it is slotted in there. */
+const DISC_ROW = MENU[DISC_CAT].items.findIndex(it => it.t === 'Fandango at Home');
+
+const T_READ  = 9100;   // home screen held while the disc spins up
+const T_DARK1 = 3400;   // black before the banner
+const T_BAN   = 5000;   // banner on screen
+const T_DARK2 = 2600;   // black before picture
+
+/* Setup rows are plain menu entries: single line, optically centred.
+   Everything else reserves the two-line title/description block. */
+const ONE_LINE_CATEGORY = 0;
+
+let cat = 3;                                   // Video, as the clip opens
+const sel = MENU.map(c => c.start);
+
+/* optional deep link: #<category>/<row> */
+(function () {
+  const m = /^#(\d+)(?:\/(\d+))?$/.exec(location.hash || '');
+  if (!m) return;
+  cat = Math.max(0, Math.min(MENU.length - 1, +m[1]));
+  if (m[2] !== undefined) sel[cat] = Math.max(0, Math.min(MENU[cat].items.length - 1, +m[2]));
+})();
+
+/* ---------- row factory ---------------------------------------------*/
+function makeRow(it, ci, col) {
+  const row = document.createElement('div');
+  row.className = 'item ' + (it.one || ci === ONE_LINE_CATEGORY ? 'one' : 'two');
+
+  const fc = document.createElement('div');
+  fc.className = 'fc';
+  row.appendChild(fc);
+
+  const ic = new Image();
+  ic.className = 'ic' + (it.thumb ? ' thumb' : '');
+  ic.src = it.i; ic.alt = '';
+  row.appendChild(ic);
+
+  const tx = document.createElement('div');
+  tx.className = 'tx';
+
+  const ti = document.createElement('div');
+  ti.className = 'ti';
+  ti.textContent = it.t;
+  tx.appendChild(ti);
+
+  if (it.s) {
+    const su = document.createElement('div');
+    su.className = 'su' + (it.keep ? '' : ' onsel');
+    su.textContent = it.s;
+    tx.appendChild(su);
+  }
+  row.appendChild(tx);
+  col.appendChild(row);
+  return row;
+}
+
+/* ---------- build ---------------------------------------------------*/
+const bar = document.getElementById('bar');
+const cats = MENU.map((c, ci) => {
+  const el = document.createElement('div');
+  el.className = 'cat';
+
+  const tw = c.tile || THUMB_H;          // tile width for this category
+  el.style.setProperty('--tw', tw + 'px');
+  el.style.setProperty('--cw', (tw + 5) + 'px');
+
+  const icon = new Image();
+  icon.className = 'cat-icon';
+  icon.src = c.icon; icon.alt = '';
+  el.appendChild(icon);
+
+  const label = document.createElement('div');
+  label.className = 'cat-label';
+  label.textContent = c.name;
+  el.appendChild(label);
+
+  const col = document.createElement('div');
+  col.className = 'col';
+
+  const items = c.items.map(it => makeRow(it, ci, col));
+
+  el.appendChild(col);
+  bar.appendChild(el);
+  return { el, icon, label, col, items };
+});
+
+/* ---------- layout ---------------------------------------------------*/
+function rowY(k, s) {
+  if (k === s) return SEL_Y;
+  if (k <  s)  return ABOVE1_Y - (s - k - 1) * PITCH;
+  return BELOW1_Y + (k - s - 1) * PITCH;
+}
+
+function render() {
+  cats.forEach((c, ci) => {
+    const d = ci - cat;
+    c.el.style.transform = 'translateX(' + (CAT_X + d * CAT_PITCH) + 'px)';
+    c.el.className = 'cat' + (d === 0 ? ' on' : ' d' + Math.min(Math.abs(d), 4));
+
+    const s = sel[ci];
+    c.items.forEach((row, k) => {
+      row.style.transform = 'translateY(' + rowY(k, s) + 'px)';
+      row.classList.toggle('sel', k === s);
+    });
+  });
+}
+
+/* ---------- disc transport -------------------------------------------
+   States: 'empty' -> 'loading' -> 'playing', and once stopped
+           'idle' (the disc waits in the menu) -> 'starting' -> 'playing'
+   --------------------------------------------------------------------*/
+const playEl   = document.getElementById('play');
+const osdEl    = document.getElementById('osd');
+const videoEl  = document.getElementById('disc');
+const trayEl   = document.getElementById('tray');
+const stateEl  = document.getElementById('tray-state');
+const btnMain  = document.getElementById('tray-primary');
+const btnEject = document.getElementById('tray-eject');
+
+let discState = 'empty';
+let timers = [];
+
+function clearTimers(){ timers.forEach(clearTimeout); timers = []; }
+function later(ms, fn){ timers.push(setTimeout(fn, ms)); }
+
+function showXmb(on){
+  playEl.classList.toggle('on', !on);
+  if (on) { osdEl.classList.remove('on'); videoEl.classList.remove('on'); }
+}
+
+/* the disc slots into the Video column and takes the highlight */
+function discIn(){ return MENU[DISC_CAT].items[DISC_ROW] === DISC_ITEM; }
+
+function addDiscRow(){
+  if (discIn()) return;
+  const c = cats[DISC_CAT];
+  const row = makeRow(DISC_ITEM, DISC_CAT, c.col);
+  c.col.insertBefore(row, c.items[DISC_ROW]);
+  c.items.splice(DISC_ROW, 0, row);
+  MENU[DISC_CAT].items.splice(DISC_ROW, 0, DISC_ITEM);
+  sel[DISC_CAT] = DISC_ROW;
+}
+function removeDiscRow(){
+  if (!discIn()) return;
+  const c = cats[DISC_CAT];
+  c.items.splice(DISC_ROW, 1)[0].remove();
+  MENU[DISC_CAT].items.splice(DISC_ROW, 1);
+  sel[DISC_CAT] = DISC_ROW;          // the highlight drops onto Fandango
+}
+
+/* the black / banner / black tail, shared by a fresh load and a replay */
+function runBanner(lead, dark1, dark2){
+  later(lead, function(){
+    showXmb(false);
+    later(dark1, function(){
+      osdEl.classList.add('on');
+      later(T_BAN, function(){
+        osdEl.classList.remove('on');
+        later(dark2, startPicture);
+      });
+    });
+  });
+}
+
+function startPicture(){
+  discState = 'playing';
+  syncTray();
+  videoEl.classList.add('on');
+  const r = videoEl.play();
+  if (r && r.catch) r.catch(function(){});   /* blocked autoplay just holds frame 1 */
+}
+
+function insertDisc(){
+  if (discState !== 'empty') return;
+  closeServer();
+  clearTimers();
+  discState = 'loading';
+  syncTray();
+  videoEl.src = DISC_SRC;
+  videoEl.load();
+  later(T_READ, function(){ addDiscRow(); cat = DISC_CAT; render(); });
+  runBanner(T_READ, T_DARK1, T_DARK2);
+}
+
+/* Enter on the disc row. The long dark stretches above are the disc
+   spinning up and the layer being read, so a replay skips most of them. */
+function playDisc(){
+  if (discState !== 'idle') return;
+  clearTimers();
+  discState = 'starting';
+  syncTray();
+  runBanner(420, 600, 600);
+}
+
+function stopDisc(){
+  clearTimers();
+  videoEl.pause();
+  try { videoEl.currentTime = 0; } catch (err) {}
+  showXmb(true);
+  discState = 'idle';
+  addDiscRow();
+  cat = DISC_CAT; sel[DISC_CAT] = DISC_ROW;
+  render(); syncTray();
+}
+
+function ejectDisc(){
+  if (discState === 'empty') return;
+  closeServer();
+  clearTimers();
+  videoEl.pause();
+  videoEl.removeAttribute('src');
+  videoEl.load();
+  showXmb(true);
+  removeDiscRow();
+  discState = 'empty';
+  render(); syncTray();
+}
+
+function skipToPicture(){
+  clearTimers();
+  addDiscRow();
+  cat = DISC_CAT; render();
+  showXmb(false);
+  startPicture();
+}
+
+function syncTray(){
+  const LABEL = { empty:'No disc',      loading:'Reading disc\u2026',
+                  starting:'DVD VIDEO \u00b7 starting',
+                  idle:'DVD VIDEO',    playing:'DVD VIDEO \u00b7 playing' };
+  const MAIN  = { empty:'Insert disc',  loading:'Skip to picture',
+                  starting:'Skip to picture',
+                  idle:'Play disc',     playing:'Stop' };
+  stateEl.textContent = LABEL[discState];
+  btnMain.textContent = MAIN[discState];
+  btnEject.hidden = (discState === 'empty');
+}
+
+btnMain.addEventListener('click', function(){
+  if      (discState === 'empty')   insertDisc();
+  else if (discState === 'idle')    playDisc();
+  else if (discState === 'playing') stopDisc();
+  else                              skipToPicture();   /* loading / starting */
+});
+btnEject.addEventListener('click', ejectDisc);
+
+/* tapping the corner opens the tray where there is no hover */
+document.getElementById('hot').addEventListener('click', function(){
+  trayEl.classList.add('open');
+  btnMain.focus();
+});
+trayEl.addEventListener('focusout', function(e){
+  if (!trayEl.contains(e.relatedTarget)) trayEl.classList.remove('open');
+});
+
+videoEl.addEventListener('ended', stopDisc);
+
+/* ---------- media server ---------------------------------------------
+   Measured from the capture, from the moment the row was selected:
+     0.00 - 0.30   black
+     0.30 -30.20   the "Server Startup" page, highlight sweeping
+    30.20 -35.13   "Cannot start server.", over a 6% ghost of the menu
+    35.13          back to the menu
+   --------------------------------------------------------------------*/
+const T_SRV_BLACK = 300, T_SRV_WAIT = 29900, T_SRV_FAIL = 4930;
+
+const ovlEl   = document.getElementById('ovl');
+const pnStart = document.getElementById('pn-start');
+const pnFail  = document.getElementById('pn-fail');
+const xmbEl   = document.getElementById('xmb');
+
+let overlay = null, ovlTimers = [];
+function ovlClear(){ ovlTimers.forEach(clearTimeout); ovlTimers = []; }
+function ovlLater(ms, fn){ ovlTimers.push(setTimeout(fn, ms)); }
+
+function setOverlay(which){
+  overlay = which;
+  ovlEl.classList.toggle('on', which !== null);
+  pnStart.classList.toggle('on', which === 'startup');
+  pnFail.classList.toggle('on', which === 'failed');
+  /* the startup page replaces the menu outright; the failure message
+     leaves a 6% ghost of it showing through */
+  xmbEl.style.opacity = which === null ? '' : (which === 'failed' ? '.06' : '0');
+}
+
+function openServer(){
+  if (overlay) return;
+  ovlClear();
+  setOverlay('black');
+  ovlLater(T_SRV_BLACK, function(){
+    setOverlay('startup');
+    ovlLater(T_SRV_WAIT, function(){
+      setOverlay('failed');
+      ovlLater(T_SRV_FAIL, closeServer);
+    });
+  });
+}
+function closeServer(){ ovlClear(); setOverlay(null); }
+
+/* ---------- input ----------------------------------------------------*/
+const KEYS = Object.assign(Object.create(null), {
+  ArrowLeft:[-1,0], ArrowRight:[1,0], ArrowUp:[0,-1], ArrowDown:[0,1],
+  a:[-1,0], d:[1,0], w:[0,-1], s:[0,1]
+});
+
+let hintTimer = null;
+function usedIt() {
+  const h = document.getElementById('hint');
+  if (!h.classList.contains('gone')) h.classList.add('gone');
+  clearTimeout(hintTimer);
+}
+
+addEventListener('keydown', e => {
+  if (e.altKey || e.ctrlKey || e.metaKey) return;
+  if (e.target && e.target.closest && e.target.closest('#tray')) return;
+
+  /* while a message page is up the remote only dismisses it */
+  if (overlay) {
+    e.preventDefault();
+    if (e.key === 'Enter' || e.key === ' ' || e.key === 'Escape' ||
+        e.key === 'Backspace' || e.key === 'Home') closeServer();
+    return;
+  }
+
+  /* RETURN / HOME drops the disc and goes back to the menu, as on the remote */
+  if (e.key === 'Escape' || e.key === 'Backspace' || e.key === 'Home') {
+    if (discState !== 'empty' && discState !== 'idle') { e.preventDefault(); stopDisc(); }
+    return;
+  }
+  /* once the screen has gone over to the disc, the remote stops driving the menu */
+  if (playEl.classList.contains('on')) return;
+
+  const k = KEYS[e.key] || KEYS[e.key.toLowerCase()];
+  if (k) {
+    e.preventDefault();
+    usedIt();
+    if (k[0]) cat = Math.max(0, Math.min(MENU.length - 1, cat + k[0]));
+    if (k[1]) sel[cat] = Math.max(0, Math.min(MENU[cat].items.length - 1, sel[cat] + k[1]));
+    render();
+    return;
+  }
+  if (e.key === 'Enter' || e.key === ' ') {
+    e.preventDefault();
+    usedIt();
+    const row = cats[cat].items[sel[cat]];
+    row.classList.remove('press');
+    void row.offsetWidth;
+    row.classList.add('press');
+    const it = MENU[cat].items[sel[cat]];
+    if (it === DISC_ITEM) playDisc();
+    else if (it.server) openServer();
+  }
+});
+
+/* keep the stage a perfect 16:9, scaled to fill the window ------------*/
+function fit() {
+  const s = Math.min(innerWidth / 960, innerHeight / 540);
+  document.getElementById('stage').style.transform = 'scale(' + s + ')';
+}
+addEventListener('resize', fit);
+fit();
+render();
+
+syncTray();
+hintTimer = setTimeout(usedIt, 9000);
+document.fonts && document.fonts.ready.then(render);
+</script>
+</body>
+</html>
